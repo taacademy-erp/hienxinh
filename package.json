@@ -1,0 +1,37 @@
+{
+  "name": "hien-xinh",
+  "version": "1.0.0",
+  "description": "Hiền Xinh Beauty Center - Web App Quản lý Spa & Thẩm mỹ",
+  "main": "server.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "server": "node server.js",
+    "start": "node server.js",
+    "test:browser": "node test-browser.js"
+  },
+  "keywords": [
+    "spa",
+    "beauty-center",
+    "hien-xinh",
+    "management"
+  ],
+  "author": "Hiền Xinh Beauty Center",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^2.3.0",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "lucide-react": "^1.59.0",
+    "puppeteer-core": "^25.14.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.30",
+    "tailwindcss": "^3.4.19",
+    "vite": "^8.3.4"
+  }
+}

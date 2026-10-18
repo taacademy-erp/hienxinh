@@ -1,0 +1,61 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #E60026;
+    --color-primary-dark: #A80018;
+  }
+
+  body {
+    background-color: #F8F9FA;
+    color: #1F2937;
+    font-family: 'Inter', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  }
+}
+
+/* Luxury gradients */
+.bg-sidebar-gradient {
+  background: linear-gradient(180deg, #960018 0%, #D80027 45%, #8B0012 100%);
+}
+
+.bg-login-gradient {
+  background: linear-gradient(145deg, #7A0012 0%, #A80018 35%, #D90026 75%, #F01E3C 100%);
+}
+
+.bg-promo-gradient {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 40%, #FFF5F7 100%);
+}
+
+.bg-red-btn-gradient {
+  background: linear-gradient(135deg, #E60026 0%, #C4001E 100%);
+}
+
+.bg-red-btn-gradient:hover {
+  background: linear-gradient(135deg, #FF1A3D 0%, #D40022 100%);
+}
+
+/* Custom soft scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #f87171;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e11d48;
+}
+
+/* Soft transition classes */
+.transition-smooth {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
