@@ -30,50 +30,24 @@ export default function TabCreateInvoice() {
   } = useApp();
 
   // Customer fields
-  const [customerName, setCustomerName] = useState('Nguyễn Thị Mai');
-  const [customerPhone, setCustomerPhone] = useState('0933003995');
-  const [customerDob, setCustomerDob] = useState('12/05/2005');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerDob, setCustomerDob] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
 
-  // Service line items (Real spa services, removed model kids/phong thai/catwalk)
+  // Service line items
   const [serviceRows, setServiceRows] = useState([
     {
       id: 1,
       serviceName: 'Xử lý thâm',
       listedPrice: 2000000,
-      discountPrice: 1800000,
-      total: 1800000,
-      onlineStaff: 'Nguyễn Thảo',
+      discountPrice: 2000000,
+      total: 2000000,
+      onlineStaff: '',
       onlineCommissionRate: 5,
-      directStaff: 'Trần Minh Anh',
+      directStaff: '',
       directCommissionRate: 10,
-      execStaff: 'Lê Thu Hà',
-      execCommissionRate: 15
-    },
-    {
-      id: 2,
-      serviceName: 'Phun môi Tế bào gốc',
-      listedPrice: 3300000,
-      discountPrice: 3000000,
-      total: 3000000,
-      onlineStaff: 'Nguyễn Thảo',
-      onlineCommissionRate: 5,
-      directStaff: 'Trần Minh Anh',
-      directCommissionRate: 10,
-      execStaff: 'Lê Thu Hà',
-      execCommissionRate: 15
-    },
-    {
-      id: 3,
-      serviceName: 'Chân mày điêu khắc sợi hairtrokes',
-      listedPrice: 3000000,
-      discountPrice: 2700000,
-      total: 2700000,
-      onlineStaff: 'Nguyễn Thảo',
-      onlineCommissionRate: 5,
-      directStaff: 'Trần Minh Anh',
-      directCommissionRate: 10,
-      execStaff: 'Lê Thu Hà',
+      execStaff: '',
       execCommissionRate: 15
     }
   ]);
@@ -88,7 +62,7 @@ export default function TabCreateInvoice() {
   // Payment fields
   const [paymentMethod, setPaymentMethod] = useState('Chuyển khoản');
   const [bankAccount, setBankAccount] = useState('Vietcombank Spa');
-  const [totalPayment, setTotalPayment] = useState(19500000);
+  const [totalPayment, setTotalPayment] = useState(2000000);
   const [note, setNote] = useState('');
 
   // Auto-calculate sum
@@ -224,7 +198,28 @@ export default function TabCreateInvoice() {
       note: isDraft ? 'Bản nháp' : note
     };
 
-    await addInvoice(payload);
+    const success = await addInvoice(payload);
+    if (success) {
+      setCustomerName('');
+      setCustomerPhone('');
+      setCustomerDob('');
+      setNote('');
+      setServiceRows([
+        {
+          id: Date.now(),
+          serviceName: availableServices[0]?.name || 'Xử lý thâm',
+          listedPrice: availableServices[0]?.price || 2000000,
+          discountPrice: availableServices[0]?.price || 2000000,
+          total: availableServices[0]?.price || 2000000,
+          onlineStaff: '',
+          onlineCommissionRate: 5,
+          directStaff: '',
+          directCommissionRate: 10,
+          execStaff: '',
+          execCommissionRate: 15
+        }
+      ]);
+    }
   };
 
   return (
