@@ -13,6 +13,7 @@ import {
   ChevronRight,
   ShieldAlert
 } from 'lucide-react';
+import CalendarDatePicker from './CalendarDatePicker';
 
 export default function TabInvoicesList() {
   const {
@@ -189,22 +190,14 @@ export default function TabInvoicesList() {
           </button>
         </div>
 
-        {/* If Day Mode: Dropdown listing calendar dates */}
+        {/* If Day Mode: Calendar Date Picker matching reference image 1 */}
         {timeMode === 'day' && (
-          <div className="relative min-w-[190px]">
-            <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-[#E60026] font-bold">
-              Lịch từng ngày trong tháng
-            </span>
-            <select
+          <div>
+            <CalendarDatePicker
               value={selectedDay}
-              onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1); }}
-              className="w-full px-3 py-2 bg-rose-50/40 border border-rose-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
-            >
-              <option value="all">Tất cả ngày trong tháng</option>
-              {availableDays.map(d => (
-                <option key={d} value={d}>Ngày {d}</option>
-              ))}
-            </select>
+              onChange={(d) => { setSelectedDay(d); setCurrentPage(1); }}
+              placeholder="Chọn ngày lập..."
+            />
           </div>
         )}
 

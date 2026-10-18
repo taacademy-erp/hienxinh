@@ -900,7 +900,7 @@
     {
       "id": 1,
       "date": "17/10/2026",
-      "content": "Quảng cáo Facebook",
+      "content": "Quảng cáo Facebook & Fanpage",
       "category": "Marketing",
       "amount": 2000000,
       "note": "Chạy quảng cáo tuần 3"
@@ -908,8 +908,8 @@
     {
       "id": 2,
       "date": "16/10/2026",
-      "content": "Tiền điện",
-      "category": "Điện nước",
+      "content": "Tiền điện nước mặt bằng",
+      "category": "Mặt bằng",
       "amount": 1800000,
       "note": "Tháng 10/2026"
     },
@@ -917,47 +917,47 @@
       "id": 3,
       "date": "15/10/2026",
       "content": "Tiền thuê mặt bằng",
-      "category": "Văn phòng",
+      "category": "Mặt bằng",
       "amount": 15000000,
       "note": "Tháng 10/2026"
     },
     {
       "id": 4,
       "date": "14/10/2026",
-      "content": "Mua đồng phục",
-      "category": "Vật tư",
+      "content": "Đồng phục & phụ cấp nhân sự",
+      "category": "Nhân sự",
       "amount": 3500000,
       "note": "Đồng phục nhân viên"
     },
     {
       "id": 5,
       "date": "14/10/2026",
-      "content": "In ấn tài liệu",
-      "category": "Văn phòng",
+      "content": "Tài liệu đào tạo nhân sự",
+      "category": "Nhân sự",
       "amount": 1200000,
       "note": "In tờ rơi, giáo trình"
     },
     {
       "id": 6,
       "date": "13/10/2026",
-      "content": "Mua mỹ phẩm",
-      "category": "Vật tư",
+      "content": "Mua mỹ phẩm & dưỡng chất spa",
+      "category": "Mỹ phẩm",
       "amount": 4800000,
-      "note": "Mỹ phẩm dùng lớp học"
+      "note": "Mỹ phẩm dùng lớp học & khách hàng"
     },
     {
       "id": 7,
       "date": "12/10/2026",
-      "content": "Bảo trì thiết bị",
-      "category": "Khác",
+      "content": "Mỹ phẩm điều trị chuyên sâu",
+      "category": "Mỹ phẩm",
       "amount": 1500000,
-      "note": "Bảo trì máy lạnh"
+      "note": "Mỹ phẩm tái tạo da"
     },
     {
       "id": 8,
       "date": "10/10/2026",
-      "content": "Internet/Wifi",
-      "category": "Điện nước",
+      "content": "Quảng cáo TikTok Ads",
+      "category": "Marketing",
       "amount": 300000,
       "note": "Tháng 10/2026"
     }

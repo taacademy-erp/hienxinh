@@ -18,13 +18,15 @@ export default function TabHome() {
         </p>
       </div>
 
-      {/* Main Promo Banner (100% exact graphic from design mockup) */}
-      <div className="rounded-2xl overflow-hidden shadow-soft border border-rose-100/60 transition-transform duration-300 hover:scale-[1.005]">
-        <img
-          src="/home-banner.png"
-          alt="Hiền Xinh Beauty Center - Quản lý tinh gọn, Chăm sóc tận tâm"
-          className="w-full h-auto object-cover block"
-        />
+      {/* Main Promo Banner */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-4xl rounded-2xl overflow-hidden shadow-soft border border-rose-100/60 transition-transform duration-300 hover:scale-[1.005]">
+          <img
+            src="/home-banner.png"
+            alt="Hiền Xinh Beauty Center - Quản lý tinh gọn, Chăm sóc tận tâm"
+            className="w-full h-auto object-cover block"
+          />
+        </div>
       </div>
 
       {/* 4 Quick Access Cards matching mockup exactly */}

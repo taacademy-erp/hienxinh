@@ -35,6 +35,30 @@ export default function Header() {
 
   const isChiPhi = activeTab === 'expenses';
 
+  const getRoleDisplayName = (role) => {
+    switch (role) {
+      case 'chu':
+        return 'Owner';
+      case 'ql':
+        return 'Quản lý';
+      case 'nhanvien':
+      default:
+        return 'Nhân viên';
+    }
+  };
+
+  const getRoleInitial = (role) => {
+    switch (role) {
+      case 'chu':
+        return 'O';
+      case 'ql':
+        return 'Q';
+      case 'nhanvien':
+      default:
+        return 'N';
+    }
+  };
+
   return (
     <header className="px-8 pt-6 pb-2 flex items-center justify-between select-none">
       {/* Left side */}
@@ -89,10 +113,10 @@ export default function Header() {
             className="flex items-center gap-2 pl-1 pr-3 py-1 bg-white rounded-full shadow-xs border border-gray-100 hover:bg-gray-50 transition-all"
           >
             <div className="w-7 h-7 rounded-full bg-[#C0001A] text-white font-bold flex items-center justify-center text-xs shadow-xs">
-              T
+              {getRoleInitial(user?.role)}
             </div>
             <span className="text-xs font-semibold text-gray-800">
-              {user?.name?.split(' ')[0] ? 'Thanh Tú' : 'Thanh Tú'}
+              {getRoleDisplayName(user?.role)}
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
           </button>
@@ -101,10 +125,10 @@ export default function Header() {
           {isDropdownOpen && (
             <div className="absolute right-0 mt-2 w-60 bg-white rounded-2xl shadow-xl border border-gray-100 py-2.5 z-30 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-4 py-2 border-b border-gray-100">
-                <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Tài khoản</p>
-                <p className="text-sm font-bold text-gray-900 mt-0.5">{user?.name || 'Thanh Tú'}</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Vị trí / Quyền hạn</p>
+                <p className="text-sm font-bold text-gray-900 mt-0.5">{getRoleDisplayName(user?.role)}</p>
                 <span className="inline-block mt-1 text-[11px] font-semibold text-[#C0001A] bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-100">
-                  {user?.role === 'chu' ? 'Chủ hệ thống' : user?.role === 'ql' ? 'Quản lý' : 'Nhân viên'}
+                  {user?.role === 'chu' ? 'Owner (Toàn quyền)' : user?.role === 'ql' ? 'Quản lý' : 'Nhân viên'}
                 </span>
               </div>
 

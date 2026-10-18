@@ -12,10 +12,9 @@ import {
   ChevronRight,
   ArrowUpDown,
   FileText,
-  TrendingUp,
-  Coins,
-  Wallet
+  TrendingUp
 } from 'lucide-react';
+import CalendarDatePicker from './CalendarDatePicker';
 
 export default function TabExpenses() {
   const {
@@ -49,16 +48,16 @@ export default function TabExpenses() {
     note: ''
   });
 
-  // Default seed list ordered matching user image exactly
+  // Default seed list with 4 required categories: marketing, mặt bằng, mỹ phẩm, nhân sự
   const initialSortedExpenses = [
-    { id: 1, date: '17/10/2026', content: 'Quảng cáo Facebook', category: 'Marketing', amount: 2000000, note: 'Chạy quảng cáo tuần 3' },
-    { id: 2, date: '16/10/2026', content: 'Tiền điện', category: 'Điện nước', amount: 1800000, note: 'Tháng 10/2026' },
-    { id: 3, date: '15/10/2026', content: 'Tiền thuê mặt bằng', category: 'Văn phòng', amount: 15000000, note: 'Tháng 10/2026' },
-    { id: 4, date: '14/10/2026', content: 'Mua đồng phục', category: 'Vật tư', amount: 3500000, note: 'Đồng phục nhân viên' },
-    { id: 5, date: '14/10/2026', content: 'In ấn tài liệu', category: 'Văn phòng', amount: 1200000, note: 'In tờ rơi, giáo trình' },
-    { id: 6, date: '13/10/2026', content: 'Mua mỹ phẩm', category: 'Vật tư', amount: 4800000, note: 'Mỹ phẩm dùng lớp học' },
-    { id: 7, date: '12/10/2026', content: 'Bảo trì thiết bị', category: 'Khác', amount: 1500000, note: 'Bảo trì máy lạnh' },
-    { id: 8, date: '10/10/2026', content: 'Internet/Wifi', category: 'Điện nước', amount: 300000, note: 'Tháng 10/2026' }
+    { id: 1, date: '17/10/2026', content: 'Quảng cáo Facebook & Fanpage', category: 'Marketing', amount: 2000000, note: 'Chạy quảng cáo tuần 3' },
+    { id: 2, date: '16/10/2026', content: 'Tiền điện nước mặt bằng', category: 'Mặt bằng', amount: 1800000, note: 'Tháng 10/2026' },
+    { id: 3, date: '15/10/2026', content: 'Tiền thuê mặt bằng', category: 'Mặt bằng', amount: 15000000, note: 'Tháng 10/2026' },
+    { id: 4, date: '14/10/2026', content: 'Đồng phục & phụ cấp nhân sự', category: 'Nhân sự', amount: 3500000, note: 'Đồng phục nhân viên' },
+    { id: 5, date: '14/10/2026', content: 'Tài liệu đào tạo nhân sự', category: 'Nhân sự', amount: 1200000, note: 'In tờ rơi, giáo trình' },
+    { id: 6, date: '13/10/2026', content: 'Mua mỹ phẩm & dưỡng chất spa', category: 'Mỹ phẩm', amount: 4800000, note: 'Mỹ phẩm dùng lớp học & khách hàng' },
+    { id: 7, date: '12/10/2026', content: 'Mỹ phẩm điều trị chuyên sâu', category: 'Mỹ phẩm', amount: 1500000, note: 'Mỹ phẩm tái tạo da' },
+    { id: 8, date: '10/10/2026', content: 'Quảng cáo TikTok Ads', category: 'Marketing', amount: 300000, note: 'Tháng 10/2026' }
   ];
 
   const allExpenses = useMemo(() => {
@@ -92,8 +91,8 @@ export default function TabExpenses() {
   }, [allExpenses]);
 
   // Effective day & month for summary cards
-  const effectiveDay = (timeMode === 'Ngày' && selectedDay !== 'all') ? selectedDay : (availableDays[0] || '17/10/2026');
-  const effectiveMonth = (timeMode === 'Tháng' && selectedMonth !== 'all') ? selectedMonth : (availableMonths[0] || '10/2026');
+  const effectiveDay = (timeMode === 'Ngày' && selectedDay && selectedDay !== 'all') ? selectedDay : (availableDays[0] || '17/10/2026');
+  const effectiveMonth = (timeMode === 'Tháng' && selectedMonth && selectedMonth !== 'all') ? selectedMonth : (availableMonths[0] || '10/2026');
 
   // Daily statistics
   const dailyExpenses = useMemo(() => {
@@ -111,16 +110,10 @@ export default function TabExpenses() {
     return monthlyExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
   }, [monthlyExpenses]);
 
-  // Highest expense in the selected month
-  const maxExpenseInMonth = useMemo(() => {
-    if (monthlyExpenses.length === 0) return null;
-    return [...monthlyExpenses].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0))[0];
-  }, [monthlyExpenses]);
-
   // Filtered expenses for table
   const filteredExpenses = useMemo(() => {
     return allExpenses.filter(e => {
-      const matchCat = categoryFilter === 'Tất cả' || e.category === categoryFilter;
+      const matchCat = categoryFilter === 'Tất cả' || (e.category || '').toLowerCase() === categoryFilter.toLowerCase();
       let matchDate = true;
       if (timeMode === 'Ngày' && selectedDay && selectedDay !== 'all') {
         matchDate = e.date === selectedDay;
@@ -130,10 +123,6 @@ export default function TabExpenses() {
       return matchCat && matchDate;
     });
   }, [allExpenses, categoryFilter, timeMode, selectedDay, selectedMonth]);
-
-  const filteredTotal = useMemo(() => {
-    return filteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
-  }, [filteredExpenses]);
 
   // Pagination calculation
   const totalItems = filteredExpenses.length;
@@ -197,38 +186,38 @@ export default function TabExpenses() {
     setIsModalOpen(false);
   };
 
-  // Render Category Badge exact to mockup colors
+  // Render Category Badge for marketing, mặt bằng, mỹ phẩm, nhân sự
   const renderCategoryBadge = (category) => {
-    switch (category) {
-      case 'Marketing':
+    const norm = (category || '').toLowerCase();
+    switch (norm) {
+      case 'marketing':
         return (
           <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#FFEBEF] text-[#E60026]">
             Marketing
           </span>
         );
-      case 'Điện nước':
-        return (
-          <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#E5F3FF] text-[#2B7FFF]">
-            Điện nước
-          </span>
-        );
-      case 'Văn phòng':
+      case 'mặt bằng':
         return (
           <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#FFF0E0] text-[#E67E22]">
-            Văn phòng
+            Mặt bằng
           </span>
         );
-      case 'Vật tư':
+      case 'mỹ phẩm':
         return (
           <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#F3E8FF] text-[#9333EA]">
-            Vật tư
+            Mỹ phẩm
           </span>
         );
-      case 'Khác':
+      case 'nhân sự':
+        return (
+          <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#E5F3FF] text-[#2B7FFF]">
+            Nhân sự
+          </span>
+        );
       default:
         return (
           <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#F0F2F5] text-[#64748B]">
-            Khác
+            {category}
           </span>
         );
     }
@@ -236,25 +225,25 @@ export default function TabExpenses() {
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
-      {/* 4 Summary Report Cards (Báo cáo tổng kết chi phí theo từng ngày và tháng) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 2 Summary Report Cards (Chi phí ngày & Tổng chi phí tháng) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Ô 1: Tổng chi phí ngày */}
-        <div className="bg-white rounded-2xl p-4 border border-rose-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-16 h-16 bg-rose-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white rounded-2xl p-5 border border-rose-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-20 h-20 bg-rose-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
           <div className="relative">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-600 font-serif">
                 Chi phí ngày ({effectiveDay})
               </span>
-              <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#C0001A] flex items-center justify-center shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-rose-50 text-[#C0001A] flex items-center justify-center shadow-2xs">
                 <Calendar className="w-4 h-4 stroke-[2.2]" />
               </div>
             </div>
-            <div className="mt-2.5">
-              <div className="text-xl font-extrabold text-[#C0001A] font-serif tracking-tight">
+            <div className="mt-3">
+              <div className="text-2xl font-extrabold text-[#C0001A] font-serif tracking-tight">
                 {formatVND ? formatVND(dayTotal) : `${dayTotal.toLocaleString('vi-VN')} đ`}
               </div>
-              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+              <p className="text-xs text-gray-500 font-medium mt-1">
                 {dailyExpenses.length} khoản chi trong ngày
               </p>
             </div>
@@ -262,76 +251,30 @@ export default function TabExpenses() {
         </div>
 
         {/* Ô 2: Tổng chi phí tháng */}
-        <div className="bg-white rounded-2xl p-4 border border-indigo-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-16 h-16 bg-indigo-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+        <div className="bg-white rounded-2xl p-5 border border-indigo-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-20 h-20 bg-indigo-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
           <div className="relative">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-600 font-serif">
                 Tổng chi phí tháng ({effectiveMonth})
               </span>
-              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
                 <TrendingUp className="w-4 h-4 stroke-[2.2]" />
               </div>
             </div>
-            <div className="mt-2.5">
-              <div className="text-xl font-extrabold text-indigo-700 font-serif tracking-tight">
+            <div className="mt-3">
+              <div className="text-2xl font-extrabold text-indigo-700 font-serif tracking-tight">
                 {formatVND ? formatVND(monthTotal) : `${monthTotal.toLocaleString('vi-VN')} đ`}
               </div>
-              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+              <p className="text-xs text-gray-500 font-medium mt-1">
                 {monthlyExpenses.length} khoản chi trong tháng
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Ô 3: Khoản chi lớn nhất tháng */}
-        <div className="bg-white rounded-2xl p-4 border border-amber-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-16 h-16 bg-amber-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-600 font-serif">
-                Chi lớn nhất ({effectiveMonth})
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs">
-                <Coins className="w-4 h-4 stroke-[2.2]" />
-              </div>
-            </div>
-            <div className="mt-2.5">
-              <div className="text-xl font-extrabold text-amber-700 font-serif tracking-tight truncate">
-                {maxExpenseInMonth ? (formatVND ? formatVND(maxExpenseInMonth.amount) : `${maxExpenseInMonth.amount.toLocaleString('vi-VN')} đ`) : '0 đ'}
-              </div>
-              <p className="text-[11px] text-gray-500 font-medium mt-0.5 truncate" title={maxExpenseInMonth?.content || ''}>
-                {maxExpenseInMonth ? `${maxExpenseInMonth.content} (${maxExpenseInMonth.category})` : 'Chưa có khoản chi'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Ô 4: Tổng theo bộ lọc */}
-        <div className="bg-white rounded-2xl p-4 border border-emerald-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
-          <div className="absolute -right-3 -top-3 w-16 h-16 bg-emerald-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
-          <div className="relative">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-600 font-serif">
-                Tổng theo bộ lọc
-              </span>
-              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
-                <Wallet className="w-4 h-4 stroke-[2.2]" />
-              </div>
-            </div>
-            <div className="mt-2.5">
-              <div className="text-xl font-extrabold text-emerald-700 font-serif tracking-tight">
-                {formatVND ? formatVND(filteredTotal) : `${filteredTotal.toLocaleString('vi-VN')} đ`}
-              </div>
-              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-                {filteredExpenses.length} khoản chi hiển thị
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter Section Card (Exact soft pink container from mockup with new Calendar & Month Dropdown) */}
+      {/* Filter Section Card with CalendarDatePicker */}
       <div className="bg-[#FFF5F6] rounded-2xl p-4 sm:p-5 border border-rose-100/60 shadow-xs flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap items-center gap-5">
           {/* Chế độ lọc thời gian */}
@@ -370,32 +313,22 @@ export default function TabExpenses() {
             </div>
           </div>
 
-          {/* Thanh thả xuống: Lịch từng ngày trong tháng (khi chọn Lọc theo ngày) */}
+          {/* Lọc theo ngày - Datepicker popup exact to reference image 1 */}
           {timeMode === 'Ngày' && (
             <div>
               <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#C0001A]" />
                 <span>Lịch từng ngày trong tháng</span>
               </span>
-              <div className="relative min-w-[200px]">
-                <select
-                  value={selectedDay}
-                  onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1); }}
-                  className="w-full bg-white rounded-lg px-3.5 py-2 pr-8 border border-rose-200/90 shadow-2xs text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 appearance-none"
-                >
-                  <option value="all">Tất cả ngày trong tháng</option>
-                  {availableDays.map(d => (
-                    <option key={d} value={d}>Ngày {d}</option>
-                  ))}
-                </select>
-                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-xs">
-                  ▼
-                </div>
-              </div>
+              <CalendarDatePicker
+                value={selectedDay}
+                onChange={(d) => { setSelectedDay(d); setCurrentPage(1); }}
+                placeholder="Chọn ngày chi..."
+              />
             </div>
           )}
 
-          {/* Thanh thả xuống: Lọc theo tháng (khi chọn Lọc theo tháng) */}
+          {/* Lọc theo tháng */}
           {timeMode === 'Tháng' && (
             <div>
               <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
@@ -420,7 +353,7 @@ export default function TabExpenses() {
             </div>
           )}
 
-          {/* Danh mục */}
+          {/* Danh mục (Marketing, Mặt bằng, Mỹ phẩm, Nhân sự) */}
           <div>
             <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif">
               Danh mục
@@ -431,12 +364,11 @@ export default function TabExpenses() {
                 onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
                 className="bg-white rounded-lg px-3.5 py-2 pr-8 border border-gray-200/60 shadow-2xs text-xs font-medium text-gray-800 focus:outline-none appearance-none min-w-[160px]"
               >
-                <option value="Tất cả">Tất cả</option>
+                <option value="Tất cả">Tất cả danh mục</option>
                 <option value="Marketing">Marketing</option>
-                <option value="Điện nước">Điện nước</option>
-                <option value="Văn phòng">Văn phòng</option>
-                <option value="Vật tư">Vật tư</option>
-                <option value="Khác">Khác</option>
+                <option value="Mặt bằng">Mặt bằng</option>
+                <option value="Mỹ phẩm">Mỹ phẩm</option>
+                <option value="Nhân sự">Nhân sự</option>
               </select>
               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-xs">
                 ▼
@@ -686,7 +618,7 @@ export default function TabExpenses() {
                   required
                   value={formData.content}
                   onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                  placeholder="Ví dụ: Quảng cáo Facebook, Tiền điện..."
+                  placeholder="Ví dụ: Quảng cáo Facebook, Tiền thuê mặt bằng..."
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
                 />
               </div>
@@ -699,13 +631,12 @@ export default function TabExpenses() {
                   <select
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-rose-500"
                   >
                     <option value="Marketing">Marketing</option>
-                    <option value="Điện nước">Điện nước</option>
-                    <option value="Văn phòng">Văn phòng</option>
-                    <option value="Vật tư">Vật tư</option>
-                    <option value="Khác">Khác</option>
+                    <option value="Mặt bằng">Mặt bằng</option>
+                    <option value="Mỹ phẩm">Mỹ phẩm</option>
+                    <option value="Nhân sự">Nhân sự</option>
                   </select>
                 </div>
 
