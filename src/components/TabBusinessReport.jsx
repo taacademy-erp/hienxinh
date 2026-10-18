@@ -30,7 +30,7 @@ export default function TabBusinessReport() {
         <div className="w-16 h-16 rounded-2xl bg-rose-50 text-[#E60026] flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold font-serif text-gray-900">Giới hạn quyền truy cập</h2>
+        <h2 className="text-xl font-bold font-sans text-gray-900">Giới hạn quyền truy cập</h2>
         <p className="text-sm text-gray-500 mt-2">
           Theo ma trận phân quyền, chỉ tài khoản <strong>Chủ</strong> mới có quyền xem Báo cáo Hoạt động kinh doanh.
         </p>
@@ -77,7 +77,7 @@ export default function TabBusinessReport() {
       {/* Title & Filter Bar Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
             Báo cáo hoạt động kinh doanh
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -143,7 +143,7 @@ export default function TabBusinessReport() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">TỔNG DOANH THU</p>
-            <h3 className="text-xl font-extrabold text-[#E60026] font-serif mt-0.5">
+            <h3 className="text-xl font-extrabold text-[#E60026] font-sans mt-0.5">
               8.950.000đ
             </h3>
             <div className="flex items-center gap-2 mt-1">
@@ -162,7 +162,7 @@ export default function TabBusinessReport() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">TỔNG CHI PHÍ</p>
-            <h3 className="text-xl font-extrabold text-gray-900 font-serif mt-0.5">
+            <h3 className="text-xl font-extrabold text-gray-900 font-sans mt-0.5">
               50.500.000đ
             </h3>
             <div className="flex items-center gap-2 mt-1">
@@ -181,7 +181,7 @@ export default function TabBusinessReport() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">LỢI NHUẬN THỰC TẾ</p>
-            <h3 className="text-xl font-extrabold text-emerald-600 font-serif mt-0.5">
+            <h3 className="text-xl font-extrabold text-emerald-600 font-sans mt-0.5">
               -41.550.000đ
             </h3>
             <p className="text-xs text-gray-500 mt-1">Doanh thu - Chi phí</p>
@@ -195,7 +195,7 @@ export default function TabBusinessReport() {
           </div>
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">KHÁCH HÀNG</p>
-            <h3 className="text-xl font-extrabold text-gray-900 font-serif mt-0.5">
+            <h3 className="text-xl font-extrabold text-gray-900 font-sans mt-0.5">
               7
             </h3>
             <p className="text-xs text-gray-500 mt-1">Khách hàng phát sinh trong ngày</p>
@@ -296,7 +296,7 @@ export default function TabBusinessReport() {
             <span className="font-bold text-gray-900 text-sm">
               Tổng Thu Thực Tế (Tất cả hình thức):
             </span>
-            <span className="text-xl font-extrabold text-[#E60026] font-serif">
+            <span className="text-xl font-extrabold text-[#E60026] font-sans">
               8.950.000đ
             </span>
           </div>
@@ -369,7 +369,7 @@ export default function TabBusinessReport() {
                 <td colSpan="7" className="py-3 px-4 text-gray-900">
                   Tổng cộng ({transactions.length} giao dịch)
                 </td>
-                <td className="py-3 px-4 text-right text-base text-[#E60026] font-serif font-extrabold">
+                <td className="py-3 px-4 text-right text-base text-[#E60026] font-sans font-extrabold">
                   8.950.000đ
                 </td>
               </tr>

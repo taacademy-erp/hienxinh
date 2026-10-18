@@ -122,7 +122,7 @@ export default function TabCommissionReport() {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Title */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
           Báo cáo hoa hồng
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -203,7 +203,7 @@ export default function TabCommissionReport() {
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500">Tổng hoa hồng</p>
-            <h3 className="text-2xl font-extrabold text-[#E60026] font-serif mt-1">
+            <h3 className="text-2xl font-extrabold text-[#E60026] font-sans mt-1">
               {formatNumber(totalCommissionAll)} đ
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Trong ngày {dateFilter || '17/10/2026'}</p>
@@ -217,7 +217,7 @@ export default function TabCommissionReport() {
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500">Số hóa đơn</p>
-            <h3 className="text-2xl font-extrabold text-gray-900 font-serif mt-1">
+            <h3 className="text-2xl font-extrabold text-gray-900 font-sans mt-1">
               {invoices.length || 12}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Trong ngày {dateFilter || '17/10/2026'}</p>
@@ -231,7 +231,7 @@ export default function TabCommissionReport() {
           </div>
           <div>
             <p className="text-xs font-semibold text-gray-500">Số nhân viên</p>
-            <h3 className="text-2xl font-extrabold text-gray-900 font-serif mt-1">
+            <h3 className="text-2xl font-extrabold text-gray-900 font-sans mt-1">
               {staffCommissionList.length}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Có phát sinh hoa hồng</p>
@@ -282,7 +282,7 @@ export default function TabCommissionReport() {
                     {member.invoiceCount}
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <span className="font-extrabold text-[#E60026] font-mono">
+                    <span className="font-extrabold text-[#E60026] font-sans">
                       {formatNumber(member.totalCommission)} đ
                     </span>
                   </td>
@@ -343,7 +343,7 @@ export default function TabCommissionReport() {
                   {selectedStaffDetails.initials}
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-gray-900 font-serif">
+                  <h3 className="font-bold text-lg text-gray-900 font-sans">
                     Chi tiết hoa hồng: {selectedStaffDetails.name}
                   </h3>
                   <p className="text-xs text-gray-500">
@@ -375,7 +375,7 @@ export default function TabCommissionReport() {
                   {selectedStaffDetails.breakdown && selectedStaffDetails.breakdown.length > 0 ? (
                     selectedStaffDetails.breakdown.map((item, i) => (
                       <tr key={i} className="hover:bg-rose-50/20">
-                        <td className="py-2.5 px-3 font-mono font-bold text-[#E60026]">{item.code}</td>
+                        <td className="py-2.5 px-3 font-sans font-bold text-[#E60026]">{item.code}</td>
                         <td className="py-2.5 px-3 font-medium">{item.customer}</td>
                         <td className="py-2.5 px-3">{item.service}</td>
                         <td className="py-2.5 px-3 text-gray-600">{item.role}</td>

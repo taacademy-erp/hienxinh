@@ -65,7 +65,7 @@ export default function Header() {
       <div>
         {isChiPhi ? (
           <div>
-            <h1 className="text-2xl font-bold font-serif text-[#0C1E3A] tracking-tight">
+            <h1 className="text-2xl font-bold font-sans text-[#0C1E3A] tracking-tight">
               Chi phí
             </h1>
             <p className="text-xs text-gray-500 mt-1">

@@ -42,7 +42,7 @@ export default function TabSettings() {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Title */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
           Cài đặt hệ thống
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -138,7 +138,7 @@ export default function TabSettings() {
                 <tbody className="divide-y divide-gray-100">
                   {services.map(s => (
                     <tr key={s.id} className="hover:bg-rose-50/20">
-                      <td className="py-3 px-4 font-mono font-bold text-gray-500">{s.id}</td>
+                      <td className="py-3 px-4 font-sans font-bold text-gray-500">{s.id}</td>
                       <td className="py-3 px-4 font-bold text-gray-900">{s.name}</td>
                       <td className="py-3 px-4 text-gray-600">{s.category || 'Làm đẹp'}</td>
                       <td className="py-3 px-4 text-right font-extrabold text-[#E60026] text-sm">
@@ -165,7 +165,7 @@ export default function TabSettings() {
       {activeSubTab === 'permissions' && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-            <h3 className="font-bold text-base text-gray-900 font-serif flex items-center gap-2 mb-2">
+            <h3 className="font-bold text-base text-gray-900 font-sans flex items-center gap-2 mb-2">
               <ShieldCheck className="w-5 h-5 text-[#E60026]" />
               <span>Ma trận phân quyền người dùng (Chuẩn xác theo yêu cầu)</span>
             </h3>
@@ -267,7 +267,7 @@ export default function TabSettings() {
       {/* SUBTAB 3: Spa info */}
       {activeSubTab === 'spa' && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4 max-w-xl">
-          <h3 className="font-bold text-base text-gray-900 font-serif flex items-center gap-2">
+          <h3 className="font-bold text-base text-gray-900 font-sans flex items-center gap-2">
             <Building className="w-5 h-5 text-[#E60026]" />
             <span>Thông tin Hiền Xinh Beauty Center</span>
           </h3>

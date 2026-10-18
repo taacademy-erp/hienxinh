@@ -35,7 +35,7 @@ export default function TabInvoicesList() {
         <div className="w-16 h-16 rounded-2xl bg-rose-50 text-[#E60026] flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold font-serif text-gray-900">Không có quyền truy cập</h2>
+        <h2 className="text-xl font-bold font-sans text-gray-900">Không có quyền truy cập</h2>
         <p className="text-sm text-gray-500 mt-2">
           Theo cấu hình phân quyền hệ thống, vai trò <strong>Nhân viên</strong> không có quyền xem Danh sách hóa đơn.
         </p>
@@ -135,7 +135,7 @@ export default function TabInvoicesList() {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Title */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
           Danh sách hóa đơn
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -328,14 +328,14 @@ export default function TabInvoicesList() {
                       <td className="py-3.5 px-4">
                         <button
                           onClick={() => setSelectedInvoice(inv)}
-                          className="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-[#E60026] hover:bg-rose-100 border border-rose-100 transition-all font-mono"
+                          className="px-2.5 py-1 rounded-md text-xs font-bold bg-rose-50 text-[#E60026] hover:bg-rose-100 border border-rose-100 transition-all font-sans"
                         >
                           {inv.code}
                         </button>
                       </td>
                       <td className="py-3.5 px-4 text-gray-600">{inv.date}</td>
                       <td className="py-3.5 px-4 font-semibold text-gray-900">{inv.customerName}</td>
-                      <td className="py-3.5 px-4 font-mono text-gray-700">{inv.customerPhone}</td>
+                      <td className="py-3.5 px-4 font-sans text-gray-700">{inv.customerPhone}</td>
                       <td className="py-3.5 px-4 text-gray-700">{inv.serviceSummary}</td>
                       <td className="py-3.5 px-4 text-right">
                         <span className="font-extrabold text-[#E60026]">

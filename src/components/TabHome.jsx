@@ -9,11 +9,11 @@ export default function TabHome() {
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Title Section */}
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight font-serif flex items-center gap-2">
+        <h1 className="text-3xl font-extrabold tracking-tight font-sans flex items-center gap-2">
           <span className="text-[#0F172A]">Xin chào,</span>
           <span className="text-[#C0001A]">Hiền Xinh!</span>
         </h1>
-        <p className="text-gray-500 text-xs sm:text-sm mt-1 font-serif">
+        <p className="text-gray-500 text-xs sm:text-sm mt-1 font-sans">
           Chào mừng bạn đến với hệ thống quản lý Hiền Xinh Beauty Center.
         </p>
       </div>
@@ -41,7 +41,7 @@ export default function TabHome() {
               <Users className="w-6 h-6 stroke-[1.8]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-[#0F172A] font-serif group-hover:text-[#C0001A] transition-colors">
+              <h3 className="font-bold text-sm text-[#0F172A] font-sans group-hover:text-[#C0001A] transition-colors">
                 Khách hàng
               </h3>
               <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
@@ -64,7 +64,7 @@ export default function TabHome() {
               <FilePlus className="w-6 h-6 stroke-[1.8]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-[#0F172A] font-serif group-hover:text-[#C0001A] transition-colors">
+              <h3 className="font-bold text-sm text-[#0F172A] font-sans group-hover:text-[#C0001A] transition-colors">
                 Nhập hóa đơn
               </h3>
               <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
@@ -87,7 +87,7 @@ export default function TabHome() {
               <FileText className="w-6 h-6 stroke-[1.8]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-[#0F172A] font-serif group-hover:text-[#C0001A] transition-colors">
+              <h3 className="font-bold text-sm text-[#0F172A] font-sans group-hover:text-[#C0001A] transition-colors">
                 Danh sách hóa đơn
               </h3>
               <p className="text-[11px] text-gray-500 leading-snug mt-0.5">
@@ -110,7 +110,7 @@ export default function TabHome() {
               <Wallet className="w-6 h-6 stroke-[1.8]" />
             </div>
             <div>
-              <h3 className="font-bold text-sm text-[#0F172A] font-serif group-hover:text-[#C0001A] transition-colors">
+              <h3 className="font-bold text-sm text-[#0F172A] font-sans group-hover:text-[#C0001A] transition-colors">
                 Chi phí
               </h3>
               <p className="text-[11px] text-gray-500 leading-snug mt-0.5">

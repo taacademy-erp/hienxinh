@@ -232,7 +232,7 @@ export default function TabExpenses() {
           <div className="absolute -right-3 -top-3 w-20 h-20 bg-rose-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
           <div className="relative">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-600 font-serif">
+              <span className="text-xs font-bold text-gray-600 font-sans">
                 Chi phí ngày ({effectiveDay})
               </span>
               <div className="w-9 h-9 rounded-xl bg-rose-50 text-[#C0001A] flex items-center justify-center shadow-2xs">
@@ -240,7 +240,7 @@ export default function TabExpenses() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-extrabold text-[#C0001A] font-serif tracking-tight">
+              <div className="text-2xl font-extrabold text-[#C0001A] font-sans tracking-tight">
                 {formatVND ? formatVND(dayTotal) : `${dayTotal.toLocaleString('vi-VN')} đ`}
               </div>
               <p className="text-xs text-gray-500 font-medium mt-1">
@@ -255,7 +255,7 @@ export default function TabExpenses() {
           <div className="absolute -right-3 -top-3 w-20 h-20 bg-indigo-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
           <div className="relative">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-600 font-serif">
+              <span className="text-xs font-bold text-gray-600 font-sans">
                 Tổng chi phí tháng ({effectiveMonth})
               </span>
               <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
@@ -263,7 +263,7 @@ export default function TabExpenses() {
               </div>
             </div>
             <div className="mt-3">
-              <div className="text-2xl font-extrabold text-indigo-700 font-serif tracking-tight">
+              <div className="text-2xl font-extrabold text-indigo-700 font-sans tracking-tight">
                 {formatVND ? formatVND(monthTotal) : `${monthTotal.toLocaleString('vi-VN')} đ`}
               </div>
               <p className="text-xs text-gray-500 font-medium mt-1">
@@ -279,7 +279,7 @@ export default function TabExpenses() {
         <div className="flex flex-wrap items-center gap-5">
           {/* Chế độ lọc thời gian */}
           <div>
-            <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif">
+            <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-sans">
               Thời gian
             </span>
             <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-gray-200/60 shadow-2xs">
@@ -316,7 +316,7 @@ export default function TabExpenses() {
           {/* Lọc theo ngày - Datepicker popup exact to reference image 1 */}
           {timeMode === 'Ngày' && (
             <div>
-              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
+              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-sans flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#C0001A]" />
                 <span>Lịch từng ngày trong tháng</span>
               </span>
@@ -331,7 +331,7 @@ export default function TabExpenses() {
           {/* Lọc theo tháng */}
           {timeMode === 'Tháng' && (
             <div>
-              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
+              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-sans flex items-center gap-1">
                 <Calendar className="w-3.5 h-3.5 text-[#C0001A]" />
                 <span>Chọn tháng</span>
               </span>
@@ -355,7 +355,7 @@ export default function TabExpenses() {
 
           {/* Danh mục (Marketing, Mặt bằng, Mỹ phẩm, Nhân sự) */}
           <div>
-            <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif">
+            <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-sans">
               Danh mục
             </span>
             <div className="relative">
@@ -422,7 +422,7 @@ export default function TabExpenses() {
         <div className="bg-white rounded-2xl border border-gray-100/90 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-white text-[#0F172A] font-serif border-b border-gray-100">
+              <thead className="bg-white text-[#0F172A] font-sans border-b border-gray-100">
                 <tr>
                   <th className="py-3.5 pl-6 pr-2 w-10">
                     <input
@@ -454,7 +454,7 @@ export default function TabExpenses() {
               <tbody className="divide-y divide-gray-100/70">
                 {paginatedExpenses.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-gray-400 font-serif">
+                    <td colSpan={8} className="py-8 text-center text-gray-400 font-sans">
                       Không tìm thấy khoản chi phí nào phù hợp với bộ lọc.
                     </td>
                   </tr>
@@ -475,16 +475,16 @@ export default function TabExpenses() {
                             className="w-4 h-4 rounded text-[#C0001A] focus:ring-rose-400 accent-[#C0001A]"
                           />
                         </td>
-                        <td className="py-3.5 px-3 text-gray-800 font-medium font-serif">{itemStt}</td>
-                        <td className="py-3.5 px-4 text-gray-700 font-medium font-serif">{exp.date}</td>
-                        <td className="py-3.5 px-4 font-semibold text-gray-900 font-serif">{exp.content}</td>
+                        <td className="py-3.5 px-3 text-gray-800 font-medium font-sans">{itemStt}</td>
+                        <td className="py-3.5 px-4 text-gray-700 font-medium font-sans">{exp.date}</td>
+                        <td className="py-3.5 px-4 font-semibold text-gray-900 font-sans">{exp.content}</td>
                         <td className="py-3.5 px-4">{renderCategoryBadge(exp.category)}</td>
                         <td className="py-3.5 px-4">
-                          <span className="font-extrabold text-[#C0001A] text-xs font-serif">
+                          <span className="font-extrabold text-[#C0001A] text-xs font-sans">
                             {Number(exp.amount).toLocaleString('en-US')}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-gray-600 text-xs font-serif">{exp.note}</td>
+                        <td className="py-3.5 px-4 text-gray-600 text-xs font-sans">{exp.note}</td>
                         <td className="py-3.5 pr-6 pl-4 text-center relative">
                           <div className="relative inline-block text-left">
                             <button
@@ -530,7 +530,7 @@ export default function TabExpenses() {
         </div>
 
         {/* Pagination Footer */}
-        <div className="pt-2 px-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#334155] font-serif">
+        <div className="pt-2 px-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#334155] font-sans">
           <div>
             Hiển thị {totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0} - {Math.min(currentPage * pageSize, totalItems)} / {totalItems} chi phí
           </div>
@@ -596,7 +596,7 @@ export default function TabExpenses() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h3 className="font-bold text-lg text-gray-900 font-serif">
+              <h3 className="font-bold text-lg text-gray-900 font-sans">
                 {editingExpense ? 'Chỉnh sửa khoản chi phí' : 'Thêm khoản chi phí mới'}
               </h3>
               <button

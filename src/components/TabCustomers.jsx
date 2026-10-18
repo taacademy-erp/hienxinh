@@ -176,7 +176,7 @@ export default function TabCustomers() {
       {/* Title & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
             Khách hàng
           </h1>
           <p className="text-sm text-gray-500 mt-1">
@@ -329,7 +329,7 @@ export default function TabCustomers() {
                       <td className="py-3.5 px-3 text-gray-500 font-medium">{globalIdx}</td>
                       <td className="py-3.5 px-4 font-semibold text-gray-900">{cust.name}</td>
                       <td className="py-3.5 px-4 text-gray-600">{cust.dob || '—'}</td>
-                      <td className="py-3.5 px-4 font-mono text-gray-700">{cust.phone}</td>
+                      <td className="py-3.5 px-4 font-sans text-gray-700">{cust.phone}</td>
                       <td className="py-3.5 px-4">{renderGroupBadge(cust.group)}</td>
                       <td className="py-3.5 px-4 text-gray-700 font-medium">{cust.source || 'Facebook'}</td>
                       <td className="py-3.5 pr-6 pl-4 text-center relative">
@@ -447,7 +447,7 @@ export default function TabCustomers() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <h3 className="font-bold text-lg text-gray-900 font-serif">
+              <h3 className="font-bold text-lg text-gray-900 font-sans">
                 {editingCustomer ? 'Chỉnh sửa khách hàng' : 'Thêm khách hàng mới'}
               </h3>
               <button
@@ -561,7 +561,7 @@ export default function TabCustomers() {
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
               <div>
-                <h3 className="font-bold text-lg text-gray-900 font-serif">
+                <h3 className="font-bold text-lg text-gray-900 font-sans">
                   Lịch sử hóa đơn: {viewHistoryCust.name}
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">SĐT: {viewHistoryCust.phone}</p>

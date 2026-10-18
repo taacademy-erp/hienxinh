@@ -50,7 +50,7 @@ export default function LoginView() {
             <span className="text-xs uppercase tracking-[0.2em] font-semibold text-rose-200 block mb-3">
               HIỀN XINH BEAUTY CENTER
             </span>
-            <h1 className="text-2xl sm:text-3xl font-bold font-serif leading-tight drop-shadow-sm text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold font-sans leading-tight drop-shadow-sm text-white">
               Quản lý tinh gọn – Chăm sóc tận tâm
             </h1>
             <p className="text-sm text-rose-100 mt-3 font-normal leading-relaxed">
@@ -74,7 +74,7 @@ export default function LoginView() {
         {/* Right Column: Login Form */}
         <div className="w-full md:w-7/12 p-8 sm:p-12 flex flex-col justify-center bg-white">
           <div className="max-w-md mx-auto w-full">
-            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-serif">
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-sans">
               Đăng nhập
             </h2>
             <p className="text-sm text-gray-500 mt-1.5">

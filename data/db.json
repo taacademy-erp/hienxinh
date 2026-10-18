@@ -282,6 +282,67 @@
   ],
   "invoices": [
     {
+      "id": 1792302503995,
+      "code": "HD000328",
+      "date": "18/10/2026",
+      "customerName": "Nguyễn Thị Mai",
+      "customerPhone": "0933003995",
+      "customerDob": "12/05/2005",
+      "serviceSummary": "Xử lý thâm, Phun môi Tế bào gốc, Chân mày điêu khắc sợi hairtrokes",
+      "services": [
+        {
+          "name": "Xử lý thâm",
+          "listedPrice": 2000000,
+          "discountPrice": 1800000,
+          "total": 1800000,
+          "onlineStaff": "Nguyễn Thảo",
+          "onlineCommissionRate": 5,
+          "onlineCommissionAmount": 90000,
+          "directStaff": "Trần Minh Anh",
+          "directCommissionRate": 10,
+          "directCommissionAmount": 180000,
+          "execStaff": "Lê Thu Hà",
+          "execCommissionRate": 15,
+          "execCommissionAmount": 270000
+        },
+        {
+          "name": "Phun môi Tế bào gốc",
+          "listedPrice": 3300000,
+          "discountPrice": 3000000,
+          "total": 3000000,
+          "onlineStaff": "Nguyễn Thảo",
+          "onlineCommissionRate": 5,
+          "onlineCommissionAmount": 150000,
+          "directStaff": "Trần Minh Anh",
+          "directCommissionRate": 10,
+          "directCommissionAmount": 300000,
+          "execStaff": "Lê Thu Hà",
+          "execCommissionRate": 15,
+          "execCommissionAmount": 450000
+        },
+        {
+          "name": "Chân mày điêu khắc sợi hairtrokes",
+          "listedPrice": 3000000,
+          "discountPrice": 2700000,
+          "total": 2700000,
+          "onlineStaff": "Nguyễn Thảo",
+          "onlineCommissionRate": 5,
+          "onlineCommissionAmount": 135000,
+          "directStaff": "Trần Minh Anh",
+          "directCommissionRate": 10,
+          "directCommissionAmount": 270000,
+          "execStaff": "Lê Thu Hà",
+          "execCommissionRate": 15,
+          "execCommissionAmount": 405000
+        }
+      ],
+      "totalAmount": 7500000,
+      "paymentMethod": "Chuyển khoản",
+      "bankAccount": "Vietcombank Spa",
+      "note": "",
+      "createdAt": "2026-10-18T05:48:23.995Z"
+    },
+    {
       "id": 1792300690077,
       "code": "HD000327",
       "date": "18/10/2026",
@@ -989,6 +1050,16 @@
     }
   ],
   "dailyTransactions": [
+    {
+      "id": 1792302503997,
+      "date": "18/10/2026",
+      "content": "Thanh toán HD000328",
+      "customer": "Nguyễn Thị Mai",
+      "service": "Xử lý thâm",
+      "paymentMethod": "Chuyển khoản",
+      "bankAccount": "Vietcombank Spa",
+      "amount": 7500000
+    },
     {
       "id": 1792300690079,
       "date": "18/10/2026",

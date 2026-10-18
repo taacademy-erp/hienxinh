@@ -44,7 +44,7 @@ export default function InvoiceDetailModal() {
               <p className="text-xs text-gray-500">Hotline: 0988 888 999</p>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-extrabold text-[#E60026] font-mono block">
+              <span className="text-2xl font-extrabold text-[#E60026] font-sans block">
                 {selectedInvoice.code}
               </span>
               <p className="text-xs text-gray-400 mt-1">Ngày lập: {selectedInvoice.date}</p>
@@ -59,7 +59,7 @@ export default function InvoiceDetailModal() {
             </div>
             <div>
               <span className="text-gray-500 block">Số điện thoại:</span>
-              <strong className="text-sm font-mono text-gray-900">{selectedInvoice.customerPhone}</strong>
+              <strong className="text-sm font-sans text-gray-900">{selectedInvoice.customerPhone}</strong>
             </div>
             {selectedInvoice.customerDob && (
               <div>
@@ -133,7 +133,7 @@ export default function InvoiceDetailModal() {
               <p className="text-xs text-gray-400">Đã bao gồm khuyến mãi & ưu đãi</p>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-extrabold text-[#E60026] font-serif">
+              <span className="text-2xl font-extrabold text-[#E60026] font-sans">
                 {formatNumber(selectedInvoice.totalAmount)} đ
               </span>
             </div>

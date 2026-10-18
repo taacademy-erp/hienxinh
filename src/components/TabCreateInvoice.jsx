@@ -231,7 +231,7 @@ export default function TabCreateInvoice() {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Title Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold font-serif text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold font-sans text-gray-900 tracking-tight">
           Nhập hóa đơn
         </h1>
         <p className="text-sm text-gray-500 mt-1">
@@ -277,7 +277,7 @@ export default function TabCreateInvoice() {
               value={customerPhone}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="0933003995"
-              className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-mono"
+              className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-sans"
             />
 
             {/* Suggestions dropdown if customer already in DB */}
@@ -294,7 +294,7 @@ export default function TabCreateInvoice() {
                     className="w-full text-left px-2.5 py-1.5 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors"
                   >
                     <span className="font-semibold text-gray-800">{c.name}</span>
-                    <span className="font-mono text-gray-500">{c.phone}</span>
+                    <span className="font-sans text-gray-500">{c.phone}</span>
                   </button>
                 ))}
               </div>
@@ -655,7 +655,7 @@ export default function TabCreateInvoice() {
                   </div>
                   <div>
                     <span className="text-gray-500">STK:</span>
-                    <strong className="font-mono text-[#E60026] ml-1">{activeBank.accountNumber || '—'}</strong>
+                    <strong className="font-sans text-[#E60026] ml-1">{activeBank.accountNumber || '—'}</strong>
                   </div>
                   <div>
                     <span className="text-gray-500">Chủ tài khoản:</span>
@@ -831,7 +831,7 @@ export default function TabCreateInvoice() {
                   value={newBankForm.accountNumber}
                   onChange={(e) => setNewBankForm({ ...newBankForm, accountNumber: e.target.value })}
                   placeholder="Ví dụ: 1023456789"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-sans focus:outline-none focus:ring-1 focus:ring-rose-500"
                 />
               </div>
 
