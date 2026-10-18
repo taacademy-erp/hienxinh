@@ -4,8 +4,8 @@ import { User, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginView() {
   const { login } = useApp();
-  const [username, setUsername] = useState('chu');
-  const [password, setPassword] = useState('123456');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -14,14 +14,6 @@ export default function LoginView() {
     if (e) e.preventDefault();
     setLoading(true);
     await login(username, password);
-    setLoading(false);
-  };
-
-  const handleQuickLogin = async (roleName, userAccount) => {
-    setUsername(userAccount);
-    setPassword('123456');
-    setLoading(true);
-    await login(userAccount, '123456');
     setLoading(false);
   };
 
@@ -142,7 +134,7 @@ export default function LoginView() {
                 </label>
                 <button
                   type="button"
-                  onClick={() => alert('Vui lòng liên hệ bộ phận kỹ thuật hoặc dùng tài khoản dùng thử bên dưới.')}
+                  onClick={() => alert('Vui lòng liên hệ quản trị viên để được hỗ trợ cấp lại mật khẩu.')}
                   className="text-[#E60026] hover:underline font-medium"
                 >
                   Quên mật khẩu?
@@ -160,37 +152,6 @@ export default function LoginView() {
                 </button>
               </div>
             </form>
-
-            {/* Quick Login Box matching mockups */}
-            <div className="mt-6 p-4 rounded-2xl border border-dashed border-rose-300 bg-rose-50/40">
-              <p className="text-xs text-gray-600 text-center font-medium">
-                Tài khoản dùng thử <span className="text-rose-600 font-semibold">(mật khẩu 123456)</span>
-              </p>
-              <div className="grid grid-cols-3 gap-2 mt-3">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('chu', 'chu')}
-                  className="py-1.5 px-3 bg-white hover:bg-rose-100 text-[#E60026] font-semibold text-xs rounded-lg border border-rose-200 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Chủ
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('ql', 'quanly')}
-                  className="py-1.5 px-3 bg-white hover:bg-rose-100 text-[#E60026] font-semibold text-xs rounded-lg border border-rose-200 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Quản lý
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('nhanvien', 'nhanvien')}
-                  className="py-1.5 px-3 bg-white hover:bg-rose-100 text-[#E60026] font-semibold text-xs rounded-lg border border-rose-200 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Nhân viên
-                </button>
-              </div>
-            </div>
-
           </div>
         </div>
 
