@@ -179,7 +179,17 @@
       "category": "Tiêm thẩm mỹ (Filler/Botox)"
     }
   ],
-  "customers": [],
+  "customers": [
+    {
+      "id": 1792306619169,
+      "name": "Hien Xinh",
+      "dob": "23/09/1993",
+      "phone": "7689056789",
+      "group": "Khách mới",
+      "source": "Facebook",
+      "created_at": "2026-10-18"
+    }
+  ],
   "invoices": [],
   "expenses": [],
   "bankAccounts": [
