@@ -20,7 +20,10 @@ export default function TabBusinessReport() {
     setActiveTab,
     formatVND,
     formatNumber,
-    loadData
+    loadData,
+    invoices,
+    expenses,
+    customers
   } = useApp();
 
   // If user is not "chu", block access strictly!
@@ -44,33 +47,58 @@ export default function TabBusinessReport() {
     );
   }
 
-  const [dateFilter, setDateFilter] = useState('17/10/2026');
+  const [dateFilter, setDateFilter] = useState('');
   const [timeMode, setTimeMode] = useState('Ngày');
 
-  // Breakdown values from mockup
-  const servicesBreakdown = [
-    { name: 'Chăm sóc da', amount: 850000, pct: 9.5, color: '#EF4444' },
-    { name: 'Triệt lông vĩnh viễn', amount: 1300000, pct: 14.53, color: '#3B82F6' },
-    { name: 'Laser & Điều trị', amount: 1500000, pct: 16.76, color: '#F59E0B' },
-    { name: 'Phun xăm thẩm mỹ', amount: 2500000, pct: 27.93, color: '#10B981' },
-    { name: 'Tiêm thẩm mỹ (Filler/Botox)', amount: 2800000, pct: 31.28, color: '#06B6D4' },
-    { name: 'Dưỡng sinh & Massage', amount: 0, pct: 0, color: '#8B5CF6' }
-  ];
+  const totalRevenue = (invoices || []).reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+  const totalExpenseAmount = (expenses || []).reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+  const netProfit = totalRevenue - totalExpenseAmount;
+  const totalCustomers = (customers || []).length;
 
-  const cashFlowBreakdown = [
-    { name: 'Tiền mặt', amount: 400000, pct: 4.47, color: '#EF4444', icon: 'cash' },
-    { name: 'Tiền mặt tại quầy', amount: 1250000, pct: 13.97, color: '#F59E0B', icon: 'register' },
-    { name: 'Vietcombank Spa', amount: 4500000, pct: 50.28, color: '#10B981', icon: 'bank' },
-    { name: 'Techcombank Spa', amount: 2800000, pct: 31.28, color: '#EC4899', icon: 'bank' }
-  ];
+  const transactions = (invoices || []).map((inv, idx) => ({
+    id: inv.id,
+    date: inv.date,
+    content: `Thanh toán ${inv.code}`,
+    customer: inv.customerName,
+    service: inv.serviceSummary,
+    method: inv.paymentMethod || 'Chuyển khoản',
+    account: inv.bankAccount || 'Vietcombank Spa',
+    amount: inv.totalAmount || 0
+  }));
 
-  const transactions = [
-    { id: 1, date: '17/10/2026', content: 'Thanh toán HD-000321', customer: 'Nguyễn Thị Mai', service: 'Chăm sóc da chuyên sâu', method: 'Tiền mặt', account: 'Tiền mặt tại quầy', amount: 400000 },
-    { id: 2, date: '17/10/2026', content: 'Thanh toán HD-000320', customer: 'Trần Ngọc Anh', service: 'Triệt lông nách', method: 'Chuyển khoản', account: 'Vietcombank Spa', amount: 1250000 },
-    { id: 3, date: '17/10/2026', content: 'HD-000319', customer: 'Lê Thu Hà', service: 'Laser Pico', method: 'Chuyển khoản', account: 'Techcombank Spa', amount: 1500000 },
-    { id: 4, date: '17/10/2026', content: 'HD-000318', customer: 'Phạm Thị Ngọc', service: 'Phun môi', method: 'Tiền mặt', account: 'Tiền mặt', amount: 2500000 },
-    { id: 5, date: '17/10/2026', content: 'HD-000317', customer: 'Hoàng Minh Anh', service: 'Filler môi', method: 'Chuyển khoản', account: 'Vietcombank Spa', amount: 2800000 }
-  ];
+  const servicesBreakdown = (() => {
+    if ((invoices || []).length === 0) return [];
+    const map = {};
+    (invoices || []).forEach(inv => {
+      (inv.services || []).forEach(s => {
+        const cat = s.category || 'Phun xăm & Chăm sóc da';
+        map[cat] = (map[cat] || 0) + (Number(s.total) || 0);
+      });
+    });
+    const total = totalRevenue || 1;
+    return Object.entries(map).map(([name, amount], i) => ({
+      name,
+      amount,
+      pct: totalRevenue > 0 ? Number(((amount / total) * 100).toFixed(2)) : 0,
+      color: ['#EF4444', '#3B82F6', '#F59E0B', '#10B981', '#06B6D4', '#8B5CF6'][i % 6]
+    }));
+  })();
+
+  const cashFlowBreakdown = (() => {
+    if ((invoices || []).length === 0) return [];
+    const map = {};
+    (invoices || []).forEach(inv => {
+      const acc = inv.bankAccount || (inv.paymentMethod === 'Tiền mặt' ? 'Tiền mặt tại quầy' : 'Vietcombank Spa');
+      map[acc] = (map[acc] || 0) + (Number(inv.totalAmount) || 0);
+    });
+    const total = totalRevenue || 1;
+    return Object.entries(map).map(([name, amount], i) => ({
+      name,
+      amount,
+      pct: totalRevenue > 0 ? Number(((amount / total) * 100).toFixed(2)) : 0,
+      color: ['#10B981', '#EC4899', '#F59E0B', '#3B82F6'][i % 4]
+    }));
+  })();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -144,13 +172,10 @@ export default function TabBusinessReport() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">TỔNG DOANH THU</p>
             <h3 className="text-xl font-extrabold text-[#E60026] font-sans mt-0.5">
-              8.950.000đ
+              {formatVND(totalRevenue)}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">7 giao dịch</span>
-              <span className="text-[11px] font-semibold text-emerald-600 flex items-center">
-                <ArrowUpRight className="w-3 h-3" /> 12%
-              </span>
+              <span className="text-xs text-gray-500">{transactions.length} giao dịch</span>
             </div>
           </div>
         </div>
@@ -163,13 +188,10 @@ export default function TabBusinessReport() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">TỔNG CHI PHÍ</p>
             <h3 className="text-xl font-extrabold text-gray-900 font-sans mt-0.5">
-              50.500.000đ
+              {formatVND(totalExpenseAmount)}
             </h3>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs text-gray-500">2 khoản chi</span>
-              <span className="text-[11px] font-semibold text-emerald-600 flex items-center">
-                <ArrowUpRight className="w-3 h-3" /> 8%
-              </span>
+              <span className="text-xs text-gray-500">{expenses?.length || 0} khoản chi</span>
             </div>
           </div>
         </div>
@@ -182,7 +204,7 @@ export default function TabBusinessReport() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">LỢI NHUẬN THỰC TẾ</p>
             <h3 className="text-xl font-extrabold text-emerald-600 font-sans mt-0.5">
-              -41.550.000đ
+              {formatVND(netProfit)}
             </h3>
             <p className="text-xs text-gray-500 mt-1">Doanh thu - Chi phí</p>
           </div>
@@ -196,9 +218,9 @@ export default function TabBusinessReport() {
           <div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">KHÁCH HÀNG</p>
             <h3 className="text-xl font-extrabold text-gray-900 font-sans mt-0.5">
-              7
+              {totalCustomers}
             </h3>
-            <p className="text-xs text-gray-500 mt-1">Khách hàng phát sinh trong ngày</p>
+            <p className="text-xs text-gray-500 mt-1">Tổng khách hàng trong hệ thống</p>
           </div>
         </div>
       </div>
@@ -216,34 +238,38 @@ export default function TabBusinessReport() {
                 DOANH THU THEO DỊCH VỤ (THỰC TẾ)
               </h3>
             </div>
-            <span className="text-xs text-gray-400">6 nhóm dịch vụ</span>
+            <span className="text-xs text-gray-400">{servicesBreakdown.length} nhóm dịch vụ</span>
           </div>
 
           <div className="mt-5 space-y-4">
-            {servicesBreakdown.map((item, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 font-medium text-gray-700">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span>{item.name}</span>
+            {servicesBreakdown.length === 0 ? (
+              <p className="text-xs text-gray-400 py-6 text-center">Chưa có dữ liệu dịch vụ</p>
+            ) : (
+              servicesBreakdown.map((item, idx) => (
+                <div key={idx} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 font-medium text-gray-700">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span>{item.name}</span>
+                    </div>
+                    <span className="font-bold text-gray-900">
+                      {formatNumber(item.amount)}đ{' '}
+                      <span className="text-gray-400 font-normal">({item.pct}%)</span>
+                    </span>
                   </div>
-                  <span className="font-bold text-gray-900">
-                    {formatNumber(item.amount)}đ{' '}
-                    <span className="text-gray-400 font-normal">({item.pct}%)</span>
-                  </span>
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{
+                        width: `${item.pct}%`,
+                        backgroundColor: item.color
+                      }}
+                    />
+                  </div>
                 </div>
-                {/* Progress Bar */}
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${item.pct}%`,
-                      backgroundColor: item.color
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -263,31 +289,35 @@ export default function TabBusinessReport() {
             </div>
 
             <div className="mt-5 space-y-4">
-              {cashFlowBreakdown.map((acc, idx) => (
-                <div key={idx} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-2.5 font-medium text-gray-800">
-                      {acc.icon === 'cash' && <Coins className="w-4 h-4 text-red-500" />}
-                      {acc.icon === 'register' && <Coins className="w-4 h-4 text-amber-500" />}
-                      {acc.icon === 'bank' && <Landmark className="w-4 h-4 text-emerald-600" />}
-                      <span>{acc.name}</span>
+              {cashFlowBreakdown.length === 0 ? (
+                <p className="text-xs text-gray-400 py-6 text-center">Chưa có dữ liệu dòng tiền</p>
+              ) : (
+                cashFlowBreakdown.map((acc, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2.5 font-medium text-gray-800">
+                        {acc.icon === 'cash' && <Coins className="w-4 h-4 text-red-500" />}
+                        {acc.icon === 'register' && <Coins className="w-4 h-4 text-amber-500" />}
+                        {acc.icon === 'bank' && <Landmark className="w-4 h-4 text-emerald-600" />}
+                        <span>{acc.name}</span>
+                      </div>
+                      <span className="font-bold text-gray-900">
+                        {formatNumber(acc.amount)}đ{' '}
+                        <span className="text-gray-400 font-normal">({acc.pct}%)</span>
+                      </span>
                     </div>
-                    <span className="font-bold text-gray-900">
-                      {formatNumber(acc.amount)}đ{' '}
-                      <span className="text-gray-400 font-normal">({acc.pct}%)</span>
-                    </span>
+                    <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${acc.pct}%`,
+                          backgroundColor: acc.color
+                        }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{
-                        width: `${acc.pct}%`,
-                        backgroundColor: acc.color
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -297,7 +327,7 @@ export default function TabBusinessReport() {
               Tổng Thu Thực Tế (Tất cả hình thức):
             </span>
             <span className="text-xl font-extrabold text-[#E60026] font-sans">
-              8.950.000đ
+              {formatVND(totalRevenue)}
             </span>
           </div>
         </div>
@@ -313,7 +343,7 @@ export default function TabBusinessReport() {
             </div>
             <div>
               <h2 className="font-bold text-gray-900 text-sm uppercase">
-                <span className="text-[#E60026]">CHI TIẾT DOANH THU THỰC TẾ NGÀY 17/10/2026</span>
+                <span className="text-[#E60026]">CHI TIẾT DOANH THU THỰC TẾ {dateFilter ? `NGÀY ${dateFilter}` : ''}</span>
               </h2>
               <p className="text-xs text-gray-400 mt-0.5">
                 Danh sách các khoản thu dịch vụ spa ghi nhận thực tế từ hệ thống
@@ -338,30 +368,38 @@ export default function TabBusinessReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 text-xs">
-              {transactions.map((tx, idx) => (
-                <tr key={tx.id} className="hover:bg-rose-50/20 transition-colors">
-                  <td className="py-3 px-3 text-gray-500 font-medium">{idx + 1}</td>
-                  <td className="py-3 px-4 text-gray-600">{tx.date}</td>
-                  <td className="py-3 px-4 font-semibold text-gray-900">{tx.content}</td>
-                  <td className="py-3 px-4 font-medium text-gray-800">{tx.customer}</td>
-                  <td className="py-3 px-4 text-gray-700">{tx.service}</td>
-                  <td className="py-3 px-4">
-                    {tx.method === 'Tiền mặt' ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
-                        Tiền mặt
-                      </span>
-                    ) : (
-                      <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-100">
-                        Chuyển khoản
-                      </span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-gray-700">{tx.account}</td>
-                  <td className="py-3 px-4 text-right font-extrabold text-[#E60026]">
-                    {formatNumber(tx.amount)}đ
+              {transactions.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="py-8 text-center text-gray-400 font-medium">
+                    Chưa có giao dịch phát sinh nào trong hệ thống.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                transactions.map((tx, idx) => (
+                  <tr key={tx.id} className="hover:bg-rose-50/20 transition-colors">
+                    <td className="py-3 px-3 text-gray-500 font-medium">{idx + 1}</td>
+                    <td className="py-3 px-4 text-gray-600">{tx.date}</td>
+                    <td className="py-3 px-4 font-semibold text-gray-900">{tx.content}</td>
+                    <td className="py-3 px-4 font-medium text-gray-800">{tx.customer}</td>
+                    <td className="py-3 px-4 text-gray-700">{tx.service}</td>
+                    <td className="py-3 px-4">
+                      {tx.method === 'Tiền mặt' ? (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
+                          Tiền mặt
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-100">
+                          Chuyển khoản
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-gray-700">{tx.account}</td>
+                    <td className="py-3 px-4 text-right font-extrabold text-[#E60026]">
+                      {formatNumber(tx.amount)}đ
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
             {/* Table Footer */}
             <tfoot className="bg-gray-50/90 font-bold border-t border-gray-200">
@@ -370,7 +408,7 @@ export default function TabBusinessReport() {
                   Tổng cộng ({transactions.length} giao dịch)
                 </td>
                 <td className="py-3 px-4 text-right text-base text-[#E60026] font-sans font-extrabold">
-                  8.950.000đ
+                  {formatVND(totalRevenue)}
                 </td>
               </tr>
             </tfoot>

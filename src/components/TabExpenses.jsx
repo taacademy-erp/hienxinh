@@ -61,8 +61,7 @@ export default function TabExpenses() {
   ];
 
   const allExpenses = useMemo(() => {
-    const list = expenses && expenses.length >= 8 ? expenses : initialSortedExpenses;
-    return [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+    return Array.isArray(expenses) ? [...expenses].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)) : [];
   }, [expenses]);
 
   // Extract available days and months

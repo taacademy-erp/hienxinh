@@ -174,9 +174,9 @@ export const AppProvider = ({ children }) => {
         fetch('/api/bank-accounts').then(r => r.json()).catch(() => DEFAULT_BANK_ACCOUNTS)
       ]);
 
-      if (custRes && custRes.length > 0) setCustomers(custRes);
-      if (invRes && invRes.length > 0) setInvoices(invRes);
-      if (expRes && expRes.length > 0) setExpenses(expRes);
+      setCustomers(Array.isArray(custRes) ? custRes : []);
+      setInvoices(Array.isArray(invRes) ? invRes : []);
+      setExpenses(Array.isArray(expRes) ? expRes : []);
       if (srvRes && srvRes.length > 0) setServices(srvRes);
       if (stfRes && stfRes.length > 0) setStaff(stfRes);
       if (bnkRes && bnkRes.length > 0) setBankAccounts(bnkRes);
