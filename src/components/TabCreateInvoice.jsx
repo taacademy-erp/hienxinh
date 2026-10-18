@@ -14,6 +14,7 @@ import {
   Building2,
   X
 } from 'lucide-react';
+import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 
 export default function TabCreateInvoice() {
   const {
@@ -62,15 +63,18 @@ export default function TabCreateInvoice() {
   // Payment fields
   const [paymentMethod, setPaymentMethod] = useState('Chuyển khoản');
   const [bankAccount, setBankAccount] = useState('Vietcombank Spa');
-  const [totalPayment, setTotalPayment] = useState(2000000);
+  const [paidAmount, setPaidAmount] = useState(2000000);
+  const [isPaidCustom, setIsPaidCustom] = useState(false);
   const [note, setNote] = useState('');
 
-  // Auto-calculate sum
+  // Auto-calculate sum from services
   const computedTotal = serviceRows.reduce((acc, row) => acc + (Number(row.total) || 0), 0);
 
   useEffect(() => {
-    setTotalPayment(computedTotal);
-  }, [computedTotal]);
+    if (!isPaidCustom) {
+      setPaidAmount(computedTotal);
+    }
+  }, [computedTotal, isPaidCustom]);
 
   // Handle customer suggestion lookup when typing phone or name
   const handlePhoneChange = (val) => {
@@ -187,12 +191,19 @@ export default function TabCreateInvoice() {
       };
     });
 
+    const tot = Number(computedTotal) || 0;
+    const paid = Number(paidAmount) || 0;
+    const rem = Math.max(0, tot - paid);
+
     const payload = {
       customerName: customerName.trim(),
       customerPhone: customerPhone.trim(),
       customerDob: customerDob.trim(),
       services: formattedServices,
-      totalAmount: Number(totalPayment) || computedTotal,
+      totalAmount: tot,
+      paidAmount: paid,
+      remainingAmount: rem,
+      status: rem === 0 ? 'Đã thanh toán' : (paid > 0 ? 'Còn nợ' : 'Chưa thanh toán'),
       paymentMethod,
       bankAccount,
       note: isDraft ? 'Bản nháp' : note
@@ -204,6 +215,7 @@ export default function TabCreateInvoice() {
       setCustomerPhone('');
       setCustomerDob('');
       setNote('');
+      setIsPaidCustom(false);
       setServiceRows([
         {
           id: Date.now(),
@@ -412,27 +424,27 @@ export default function TabCreateInvoice() {
                     {/* Listed Price */}
                     <td className="py-3 px-3">
                       <input
-                        type="number"
-                        value={row.listedPrice}
-                        onChange={(e) => handleRowChange(row.id, 'listedPrice', Number(e.target.value))}
-                        className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        type="text"
+                        value={formatCurrencyInput(row.listedPrice)}
+                        onChange={(e) => handleRowChange(row.id, 'listedPrice', parseCurrencyInput(e.target.value))}
+                        className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                       />
                     </td>
 
                     {/* Discount Price */}
                     <td className="py-3 px-3">
                       <input
-                        type="number"
-                        value={row.discountPrice}
-                        onChange={(e) => handleRowChange(row.id, 'discountPrice', Number(e.target.value))}
-                        className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-bold text-gray-900 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        type="text"
+                        value={formatCurrencyInput(row.discountPrice)}
+                        onChange={(e) => handleRowChange(row.id, 'discountPrice', parseCurrencyInput(e.target.value))}
+                        className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                       />
                     </td>
 
                     {/* Total Amount (Thành tiền bold red) */}
                     <td className="py-3 px-3 text-center">
-                      <span className="font-extrabold text-[#E60026] text-sm">
-                        {formatNumber(row.total)}
+                      <span className="font-extrabold text-[#E60026] text-sm font-sans">
+                        {formatCurrencyInput(row.total)}đ
                       </span>
                     </td>
 
@@ -547,7 +559,43 @@ export default function TabCreateInvoice() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="bg-rose-50/70 font-bold border-t-2 border-rose-200">
+                <td colSpan="4" className="py-3.5 px-4 text-gray-800 text-right uppercase text-xs tracking-wider">
+                  Tổng tiền các dịch vụ:
+                </td>
+                <td className="py-3.5 px-3 text-center">
+                  <span className="text-base font-extrabold text-[#E60026] font-sans">
+                    {formatCurrencyInput(computedTotal)}đ
+                  </span>
+                </td>
+                <td colSpan="4" className="py-3.5 px-3 text-xs text-gray-500 font-medium">
+                  (Cộng các giá tiền tại cột thành tiền: {serviceRows.length} dịch vụ)
+                </td>
+              </tr>
+            </tfoot>
           </table>
+        </div>
+
+        {/* Ô tổng tiền dưới khung dịch vụ cộng dồn các thành tiền */}
+        <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-rose-50 via-pink-50 to-orange-50 border border-rose-200 flex flex-wrap items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-3 h-3 rounded-full bg-[#E60026] animate-pulse"></div>
+            <div>
+              <span className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+                Tổng tiền tại khung dịch vụ:
+              </span>
+              <span className="text-xs text-gray-500 ml-2">
+                (Tổng cộng dồn từ cột thành tiền của {serviceRows.length} dịch vụ)
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium">Tổng cộng:</span>
+            <span className="text-2xl font-extrabold text-[#E60026] font-sans">
+              {formatCurrencyInput(computedTotal)} đ
+            </span>
+          </div>
         </div>
       </div>
 
@@ -562,21 +610,66 @@ export default function TabCreateInvoice() {
           </h2>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
-          {/* Payment Amount */}
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+          {/* Tổng tiền */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Số tiền thanh toán <span className="text-red-500">*</span>
+              Tổng tiền (VNĐ) <span className="text-gray-400 font-normal">(Cộng từ khung dịch vụ)</span>
             </label>
-            <input
-              type="number"
-              required
-              value={totalPayment}
-              onChange={(e) => setTotalPayment(Number(e.target.value))}
-              placeholder="10,000,000"
-              className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-base font-bold text-[#E60026] focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                readOnly
+                value={formatCurrencyInput(computedTotal)}
+                className="w-full px-3.5 py-2.5 bg-gray-100 border border-gray-200 rounded-xl text-base font-extrabold text-gray-900 cursor-not-allowed font-sans"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">đ</span>
+            </div>
           </div>
+
+          {/* Đã thanh toán */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Đã thanh toán (VNĐ) <span className="text-red-500">*</span>
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={formatCurrencyInput(paidAmount)}
+                onChange={(e) => {
+                  setIsPaidCustom(true);
+                  setPaidAmount(parseCurrencyInput(e.target.value));
+                }}
+                placeholder="0"
+                className="w-full px-3.5 py-2.5 bg-white border border-emerald-300 rounded-xl text-base font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-sans"
+              />
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600">đ</span>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">Mặc định thanh toán đủ, có thể sửa khi khách trả trước</p>
+          </div>
+
+          {/* Còn lại (Khách nợ) */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+              Còn lại (Khách còn nợ)
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                readOnly
+                value={formatCurrencyInput(Math.max(0, computedTotal - paidAmount))}
+                className={`w-full px-3.5 py-2.5 bg-gray-100 border rounded-xl text-base font-extrabold cursor-not-allowed font-sans ${computedTotal - paidAmount > 0 ? 'text-[#E60026] border-rose-200' : 'text-gray-600 border-gray-200'}`}
+              />
+              <span className={`absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold ${computedTotal - paidAmount > 0 ? 'text-[#E60026]' : 'text-gray-500'}`}>đ</span>
+            </div>
+            {computedTotal - paidAmount > 0 && (
+              <p className="text-[11px] text-[#E60026] font-semibold mt-1">Ghi nhận công nợ của khách hàng</p>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
 
           {/* Payment Method Radio */}
           <div>

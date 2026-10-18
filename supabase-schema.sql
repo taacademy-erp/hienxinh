@@ -79,6 +79,8 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     subtotal NUMERIC(15,2) NOT NULL DEFAULT 0,
     discount NUMERIC(15,2) DEFAULT 0,
     total_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
+    paid_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
+    remaining_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
     payment_method VARCHAR(50) NOT NULL DEFAULT 'Chuyển khoản',
     bank_account VARCHAR(100),
     notes TEXT,

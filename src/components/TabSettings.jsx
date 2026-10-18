@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Check, User } from 'lucide-react';
+import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 
 export default function TabSettings() {
   const {
@@ -102,11 +103,11 @@ export default function TabSettings() {
                 className="flex-1 min-w-[280px] px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
               />
               <input
-                type="number"
+                type="text"
                 placeholder="Giá niêm yết (VNĐ)"
-                value={newServicePrice}
-                onChange={(e) => setNewServicePrice(e.target.value)}
-                className="w-48 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                value={formatCurrencyInput(newServicePrice)}
+                onChange={(e) => setNewServicePrice(parseCurrencyInput(e.target.value))}
+                className="w-48 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
               />
               <button
                 type="submit"

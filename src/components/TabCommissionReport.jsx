@@ -30,27 +30,17 @@ export default function TabCommissionReport() {
 
   // Compute commission stats per staff member dynamically from invoices
   const staffCommissionList = useMemo(() => {
-    // Default mock reference numbers from mockup as base or dynamic
-    const mockRef = {
-      'Nguyễn Thảo': { count: 5, total: 10000000, avg: '12.5%' },
-      'Trần Minh Anh': { count: 4, total: 7200000, avg: '12.0%' },
-      'Lê Thu Hà': { count: 3, total: 4500000, avg: '11.5%' },
-      'Nguyễn Mai': { count: 2, total: 2400000, avg: '12.0%' },
-      'Vũ Thị Quỳnh': { count: 2, total: 1950000, avg: '11.0%' },
-      'Đặng Thảo Vy': { count: 1, total: 450000, avg: '8.0%' }
-    };
-
-    return staff.map((member, i) => {
+    return staff.map((member) => {
       let dynInvoices = [];
       let dynCount = 0;
       let dynTotal = 0;
 
-      invoices.forEach(inv => {
+      (invoices || []).forEach(inv => {
         let memberInInv = false;
         (inv.services || []).forEach(srv => {
           if (srv.onlineStaff === member.name) {
             memberInInv = true;
-            const amt = Number(srv.onlineCommissionAmount) || Math.round((srv.total * (srv.onlineCommissionRate || 0)) / 100);
+            const amt = Number(srv.onlineCommissionAmount) || Math.round(((srv.total || 0) * (srv.onlineCommissionRate || 0)) / 100);
             dynTotal += amt;
             dynInvoices.push({
               code: inv.code,
@@ -64,7 +54,7 @@ export default function TabCommissionReport() {
           }
           if (srv.directStaff === member.name) {
             memberInInv = true;
-            const amt = Number(srv.directCommissionAmount) || Math.round((srv.total * (srv.directCommissionRate || 0)) / 100);
+            const amt = Number(srv.directCommissionAmount) || Math.round(((srv.total || 0) * (srv.directCommissionRate || 0)) / 100);
             dynTotal += amt;
             dynInvoices.push({
               code: inv.code,
@@ -78,7 +68,7 @@ export default function TabCommissionReport() {
           }
           if (srv.execStaff === member.name) {
             memberInInv = true;
-            const amt = Number(srv.execCommissionAmount) || Math.round((srv.total * (srv.execCommissionRate || 0)) / 100);
+            const amt = Number(srv.execCommissionAmount) || Math.round(((srv.total || 0) * (srv.execCommissionRate || 0)) / 100);
             dynTotal += amt;
             dynInvoices.push({
               code: inv.code,
@@ -94,16 +84,11 @@ export default function TabCommissionReport() {
         if (memberInInv) dynCount++;
       });
 
-      // Combine with reference if newly created invoices exist
-      const ref = mockRef[member.name] || { count: 1, total: 500000, avg: '10.0%' };
-      const finalCount = Math.max(dynCount, ref.count);
-      const finalTotal = Math.max(dynTotal, ref.total);
-
       return {
         ...member,
-        invoiceCount: finalCount,
-        totalCommission: finalTotal,
-        averageRate: ref.avg,
+        invoiceCount: dynCount,
+        totalCommission: dynTotal,
+        averageRate: dynCount > 0 ? (member.commissionRate ? `${member.commissionRate}%` : '5%') : '0%',
         breakdown: dynInvoices
       };
     }).sort((a, b) => b.totalCommission - a.totalCommission);
@@ -218,7 +203,7 @@ export default function TabCommissionReport() {
           <div>
             <p className="text-xs font-semibold text-gray-500">Số hóa đơn</p>
             <h3 className="text-2xl font-extrabold text-gray-900 font-sans mt-1">
-              {invoices.length || 12}
+              {(invoices || []).length}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Trong ngày {dateFilter || '17/10/2026'}</p>
           </div>
@@ -232,7 +217,7 @@ export default function TabCommissionReport() {
           <div>
             <p className="text-xs font-semibold text-gray-500">Số nhân viên</p>
             <h3 className="text-2xl font-extrabold text-gray-900 font-sans mt-1">
-              {staffCommissionList.length}
+              {staffCommissionList.filter(s => s.totalCommission > 0).length}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">Có phát sinh hoa hồng</p>
           </div>
@@ -267,7 +252,14 @@ export default function TabCommissionReport() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {filteredList.map((member, idx) => (
+              {totalCommissionAll === 0 ? (
+                <tr>
+                  <td colSpan="6" className="py-12 text-center text-gray-400 font-medium">
+                    Chưa có dữ liệu hoa hồng phát sinh trong hệ thống.
+                  </td>
+                </tr>
+              ) : (
+                filteredList.map((member, idx) => (
                 <tr key={member.id} className="hover:bg-rose-50/20 transition-colors">
                   <td className="py-3.5 pl-6 pr-3 text-gray-500 font-medium">{idx + 1}</td>
                   <td className="py-3.5 px-4">
@@ -299,7 +291,8 @@ export default function TabCommissionReport() {
                     </button>
                   </td>
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
         </div>

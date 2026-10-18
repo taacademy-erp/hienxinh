@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Printer, CheckCircle2 } from 'lucide-react';
+import { formatCurrencyInput } from '../utils/currencyUtils';
 
 export default function InvoiceDetailModal() {
   const { selectedInvoice, setSelectedInvoice, formatNumber, formatVND } = useApp();
@@ -10,6 +11,10 @@ export default function InvoiceDetailModal() {
   const handlePrint = () => {
     window.print();
   };
+
+  const total = Number(selectedInvoice.totalAmount) || 0;
+  const paid = selectedInvoice.paidAmount !== undefined && selectedInvoice.paidAmount !== null ? Number(selectedInvoice.paidAmount) : total;
+  const remaining = selectedInvoice.remainingAmount !== undefined && selectedInvoice.remainingAmount !== null ? Number(selectedInvoice.remainingAmount) : Math.max(0, total - paid);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
@@ -94,13 +99,13 @@ export default function InvoiceDetailModal() {
                     <td className="py-2.5 px-3 text-gray-500">{i + 1}</td>
                     <td className="py-2.5 px-3 font-semibold text-gray-900">{s.name}</td>
                     <td className="py-2.5 px-3 text-right text-gray-500 line-through">
-                      {formatNumber(s.listedPrice)} đ
+                      {formatCurrencyInput(s.listedPrice)} đ
                     </td>
                     <td className="py-2.5 px-3 text-right font-medium">
-                      {formatNumber(s.discountPrice)} đ
+                      {formatCurrencyInput(s.discountPrice)} đ
                     </td>
                     <td className="py-2.5 px-3 text-right font-extrabold text-[#E60026]">
-                      {formatNumber(s.total)} đ
+                      {formatCurrencyInput(s.total)} đ
                     </td>
                   </tr>
                 ))}
@@ -114,28 +119,38 @@ export default function InvoiceDetailModal() {
               <span className="font-bold text-[#E60026] block">Phân bổ hoa hồng nhân sự:</span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <div>
-                  Online: <strong>{selectedInvoice.services[0].onlineStaff}</strong> (+{formatNumber(selectedInvoice.services[0].onlineCommissionAmount)} đ)
+                  Online: <strong>{selectedInvoice.services[0].onlineStaff}</strong> (+{formatCurrencyInput(selectedInvoice.services[0].onlineCommissionAmount)} đ)
                 </div>
                 <div>
-                  Tư vấn TT: <strong>{selectedInvoice.services[0].directStaff}</strong> (+{formatNumber(selectedInvoice.services[0].directCommissionAmount)} đ)
+                  Tư vấn TT: <strong>{selectedInvoice.services[0].directStaff}</strong> (+{formatCurrencyInput(selectedInvoice.services[0].directCommissionAmount)} đ)
                 </div>
                 <div>
-                  Thực hiện: <strong>{selectedInvoice.services[0].execStaff}</strong> (+{formatNumber(selectedInvoice.services[0].execCommissionAmount)} đ)
+                  Thực hiện: <strong>{selectedInvoice.services[0].execStaff}</strong> (+{formatCurrencyInput(selectedInvoice.services[0].execCommissionAmount)} đ)
                 </div>
               </div>
             </div>
           )}
 
-          {/* Grand Total */}
-          <div className="pt-4 border-t border-gray-200 flex items-center justify-between">
-            <div>
-              <span className="text-xs text-gray-500">Tổng thanh toán thực thu</span>
-              <p className="text-xs text-gray-400">Đã bao gồm khuyến mãi & ưu đãi</p>
+          {/* Grand Total with Payment Breakdown */}
+          <div className="pt-4 border-t border-gray-200 space-y-2">
+            <div className="flex items-center justify-between text-xs text-gray-600">
+              <span>Tổng tiền dịch vụ:</span>
+              <span className="font-bold text-gray-900 font-sans text-sm">{formatCurrencyInput(total)} đ</span>
             </div>
-            <div className="text-right">
-              <span className="text-2xl font-extrabold text-[#E60026] font-sans">
-                {formatNumber(selectedInvoice.totalAmount)} đ
-              </span>
+            <div className="flex items-center justify-between text-xs text-emerald-700">
+              <span>Đã thanh toán:</span>
+              <span className="font-bold font-sans text-sm">{formatCurrencyInput(paid)} đ</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-dashed border-gray-200">
+              <div>
+                <span className="text-xs font-bold text-gray-700">Còn lại (Công nợ):</span>
+                <p className="text-[11px] text-gray-400">Số tiền khách còn phải thanh toán</p>
+              </div>
+              <div className="text-right">
+                <span className={`text-2xl font-black font-sans ${remaining > 0 ? 'text-[#E60026]' : 'text-emerald-600'}`}>
+                  {formatCurrencyInput(remaining)} đ
+                </span>
+              </div>
             </div>
           </div>
         </div>

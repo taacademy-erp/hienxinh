@@ -11,9 +11,13 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  FileText,
+  Users,
+  Coins
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
+import { formatCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
 
 export default function TabInvoicesList() {
   const {
@@ -84,6 +88,43 @@ export default function TabInvoicesList() {
     return { availableMonths: months, availableDays: days };
   }, [invoices]);
 
+  // Today string formatted as DD/MM/YYYY
+  const todayStr = useMemo(() => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const y = now.getFullYear();
+    return `${d}/${m}/${y}`;
+  }, []);
+
+  // Target date for "Số Hóa Đơn trong ngày"
+  const targetDay = (timeMode === 'day' && selectedDay && selectedDay !== 'all') ? selectedDay : todayStr;
+
+  // 1. Số Hóa Đơn trong ngày
+  const dayInvoicesCount = useMemo(() => {
+    return (invoices || []).filter(inv => inv.date === targetDay || (inv.date || '').startsWith(targetDay)).length;
+  }, [invoices, targetDay]);
+
+  // 2. Số khách hàng còn nợ & 3. Số tiền cần thu
+  const debtStats = useMemo(() => {
+    const debtCustomers = new Set();
+    let totalDebt = 0;
+    (invoices || []).forEach(inv => {
+      const total = Number(inv.totalAmount) || 0;
+      const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
+      const remaining = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
+      if (remaining > 0) {
+        const key = (inv.customerPhone || '').trim() || (inv.customerName || '').trim() || inv.id;
+        debtCustomers.add(key);
+        totalDebt += remaining;
+      }
+    });
+    return {
+      debtCustomersCount: debtCustomers.size,
+      totalDebtAmount: totalDebt
+    };
+  }, [invoices]);
+
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
     return (invoices || []).filter(inv => {
@@ -144,20 +185,67 @@ export default function TabInvoicesList() {
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="flex-1 min-w-[220px]">
-          <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              placeholder="Tìm theo mã HD, tên khách hàng, SĐT..."
-              className="w-full pl-9 pr-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
-            />
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
+        {/* 3 ô tổng hợp trên thanh lọc: 1 ô tổng hợp là Số Hóa Đơn trong ngày, số khách hàng còn nợ và số tiền cần thu */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-gray-100">
+          <div className="flex items-center gap-3.5 p-3.5 bg-rose-50/50 rounded-xl border border-rose-100">
+            <div className="w-10 h-10 rounded-xl bg-[#E60026] text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Số Hóa Đơn trong ngày {timeMode === 'day' && selectedDay && selectedDay !== 'all' ? `(${selectedDay})` : '(Hôm nay)'}
+              </div>
+              <div className="text-xl font-black text-gray-900 font-sans mt-0.5">
+                {dayInvoicesCount} <span className="text-xs font-normal text-gray-500">hóa đơn</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 p-3.5 bg-amber-50/50 rounded-xl border border-amber-100">
+            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Số khách hàng còn nợ
+              </div>
+              <div className="text-xl font-black text-amber-600 font-sans mt-0.5">
+                {debtStats.debtCustomersCount} <span className="text-xs font-normal text-gray-500">khách hàng</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 rounded-xl border border-red-100">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
+              <Coins className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                Số tiền cần thu
+              </div>
+              <div className="text-xl font-black text-[#E60026] font-sans mt-0.5">
+                {formatCurrencyInput(debtStats.totalDebtAmount)} <span className="text-xs font-bold text-[#E60026]">đ</span>
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Filter Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="flex-1 min-w-[220px]">
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Tìm theo mã HD, tên khách hàng, SĐT..."
+                className="w-full pl-9 pr-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
+              />
+            </div>
+          </div>
 
         {/* Time Filter Mode Toggle */}
         <div className="flex items-center bg-gray-100/90 p-1 rounded-xl border border-gray-200 text-xs">
@@ -253,14 +341,15 @@ export default function TabInvoicesList() {
           <span>Làm mới</span>
         </button>
 
-        {/* Create Invoice Button */}
-        <button
-          onClick={() => setActiveTab('createInvoice')}
-          className="inline-flex items-center gap-2 px-5 py-2 bg-[#E60026] hover:bg-[#c90021] text-white font-semibold text-sm rounded-xl shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm hóa đơn</span>
-        </button>
+          {/* Create Invoice Button */}
+          <button
+            onClick={() => setActiveTab('createInvoice')}
+            className="inline-flex items-center gap-2 px-5 py-2 bg-[#E60026] hover:bg-[#c90021] text-white font-semibold text-sm rounded-xl shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Thêm hóa đơn</span>
+          </button>
+        </div>
       </div>
 
       {/* Invoice Table Card */}
@@ -296,14 +385,16 @@ export default function TabInvoicesList() {
                 <th className="py-3.5 px-4 font-bold text-gray-800">Họ và tên khách hàng</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Số điện thoại</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Dịch vụ</th>
-                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Thành tiền</th>
+                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Tổng tiền</th>
+                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Đã thanh toán</th>
+                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Còn lại</th>
                 <th className="py-3.5 pr-6 pl-4 text-center font-bold text-gray-800 w-24">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="py-12 text-center text-gray-400">
+                  <td colSpan="11" className="py-12 text-center text-gray-400">
                     Không tìm thấy hóa đơn nào phù hợp.
                   </td>
                 </tr>
@@ -336,11 +427,33 @@ export default function TabInvoicesList() {
                       <td className="py-3.5 px-4 text-gray-600">{inv.date}</td>
                       <td className="py-3.5 px-4 font-semibold text-gray-900">{inv.customerName}</td>
                       <td className="py-3.5 px-4 font-sans text-gray-700">{inv.customerPhone}</td>
-                      <td className="py-3.5 px-4 text-gray-700">{inv.serviceSummary}</td>
+                      <td className="py-3.5 px-4 text-gray-700 max-w-[200px] truncate" title={inv.serviceSummary}>{inv.serviceSummary}</td>
+                      {/* Tổng tiền */}
                       <td className="py-3.5 px-4 text-right">
-                        <span className="font-extrabold text-[#E60026]">
-                          {formatNumber(inv.totalAmount)}
+                        <span className="font-extrabold text-[#E60026] font-sans">
+                          {formatCurrencyInput(Number(inv.totalAmount) || 0)}đ
                         </span>
+                      </td>
+
+                      {/* Đã thanh toán */}
+                      <td className="py-3.5 px-4 text-right">
+                        <span className="font-semibold text-emerald-600 font-sans">
+                          {formatCurrencyInput(inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : (Number(inv.totalAmount) || 0))}đ
+                        </span>
+                      </td>
+
+                      {/* Còn lại */}
+                      <td className="py-3.5 px-4 text-right">
+                        {(() => {
+                          const tot = Number(inv.totalAmount) || 0;
+                          const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : tot;
+                          const rem = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, tot - paid);
+                          return (
+                            <span className={`font-bold font-sans ${rem > 0 ? 'text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md inline-block border border-amber-200/80' : 'text-gray-400'}`}>
+                              {formatCurrencyInput(rem)}đ
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="py-3.5 pr-6 pl-4 text-center relative">
                         <div className="relative inline-block text-left">

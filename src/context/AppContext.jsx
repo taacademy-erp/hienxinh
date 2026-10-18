@@ -328,90 +328,116 @@ export const AppProvider = ({ children }) => {
   const addInvoice = async (invoiceData) => {
     const newCode = invoiceData.code || ('HD' + String(invoices.length + 322).padStart(6, '0'));
     const newDate = invoiceData.date || new Date().toLocaleDateString('vi-VN');
+    const tot = Number(invoiceData.totalAmount) || 0;
+    const paid = invoiceData.paidAmount !== undefined ? Number(invoiceData.paidAmount) : tot;
+    const rem = invoiceData.remainingAmount !== undefined ? Number(invoiceData.remainingAmount) : Math.max(0, tot - paid);
+    const status = invoiceData.status || (rem === 0 ? 'Đã thanh toán' : (paid > 0 ? 'Còn nợ' : 'Chưa thanh toán'));
+
     const fullInv = {
       ...invoiceData,
       code: newCode,
       date: newDate,
+      totalAmount: tot,
+      paidAmount: paid,
+      remainingAmount: rem,
+      status,
       serviceSummary: invoiceData.serviceSummary || (invoiceData.services || []).map(s => s.name).join(', ')
     };
 
-    // 1. Supabase
+    // 1. GUARANTEED: Update local customers state immediately!
+    const cleanPhone = (fullInv.customerPhone || '').replace(/\s+/g, '');
+    if (cleanPhone) {
+      setCustomers(prev => {
+        const idx = prev.findIndex(c => (c.phone || '').replace(/\s+/g, '') === cleanPhone);
+        if (idx >= 0) {
+          const existing = prev[idx];
+          const updated = {
+            ...existing,
+            name: fullInv.customerName || existing.name,
+            dob: fullInv.customerDob || existing.dob || existing.birthdate || '',
+            birthdate: fullInv.customerDob || existing.birthdate || existing.dob || '',
+            totalSpent: (Number(existing.totalSpent) || 0) + tot,
+            visitCount: (Number(existing.visitCount) || 0) + 1,
+            lastVisit: fullInv.date
+          };
+          const copy = [...prev];
+          copy[idx] = updated;
+          return copy;
+        } else {
+          const newCust = {
+            id: Date.now(),
+            name: fullInv.customerName,
+            phone: fullInv.customerPhone,
+            dob: fullInv.customerDob || '',
+            birthdate: fullInv.customerDob || '',
+            group: 'Khách mới',
+            source: 'Tại quầy',
+            address: '',
+            notes: `Hóa đơn ${fullInv.code}`,
+            totalSpent: tot,
+            visitCount: 1,
+            lastVisit: fullInv.date,
+            createdAt: new Date().toISOString()
+          };
+          return [newCust, ...prev];
+        }
+      });
+    }
+
+    // 2. GUARANTEED: Update local invoices state immediately!
+    setInvoices(prev => [fullInv, ...prev.filter(inv => inv.id !== fullInv.id && inv.code !== fullInv.code)]);
+
+    // 3. Persist to Supabase Cloud in background
     try {
       const sbInv = await supabaseService.addInvoice(fullInv);
-      if (sbInv) {
-        // Auto-sync customer
-        if (fullInv.customerPhone) {
-          const cleanPhone = fullInv.customerPhone.replace(/\s+/g, '');
-          const existingCust = customers.find(c => (c.phone || '').replace(/\s+/g, '') === cleanPhone);
-          if (existingCust) {
-            await supabaseService.updateCustomer(existingCust.id, {
-              totalSpent: (existingCust.totalSpent || 0) + Number(fullInv.totalAmount || 0),
-              visitCount: (existingCust.visitCount || 0) + 1,
-              lastVisit: fullInv.date
-            });
-          } else {
-            await supabaseService.addCustomer({
-              name: fullInv.customerName,
-              phone: fullInv.customerPhone,
-              dob: fullInv.customerDob || '',
-              group: 'Khách mới',
-              source: 'Tại quầy',
-              totalSpent: Number(fullInv.totalAmount || 0),
-              visitCount: 1,
-              lastVisit: fullInv.date
-            });
-          }
+      if (sbInv && cleanPhone) {
+        const existingCust = customers.find(c => (c.phone || '').replace(/\s+/g, '') === cleanPhone);
+        if (existingCust) {
+          await supabaseService.updateCustomer(existingCust.id, {
+            totalSpent: (Number(existingCust.totalSpent) || 0) + tot,
+            visitCount: (Number(existingCust.visitCount) || 0) + 1,
+            lastVisit: fullInv.date
+          });
+        } else {
+          await supabaseService.addCustomer({
+            name: fullInv.customerName,
+            phone: fullInv.customerPhone,
+            dob: fullInv.customerDob || '',
+            birthdate: fullInv.customerDob || '',
+            customer_group: 'Khách mới',
+            source: 'Tại quầy',
+            total_spent: tot,
+            visit_count: 1,
+            last_visit: fullInv.date
+          });
         }
 
-        // Add daily transaction
         await supabaseService.addDailyTransaction({
           date: fullInv.date,
           type: 'income',
-          amount: Number(fullInv.totalAmount || 0),
+          amount: paid,
           content: `Thanh toán ${fullInv.code}`,
           referenceCode: fullInv.code,
           accountName: fullInv.bankAccount || fullInv.paymentMethod
         });
-
-        // Sync local API
-        fetch('/api/invoices', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(fullInv)
-        }).catch(() => {});
-
-        addToast('Lưu hóa đơn lên Supabase thành công!', 'success');
-        await loadData();
-        if (hasPermission('invoicesList')) setActiveTab('invoicesList');
-        else setActiveTab('home');
-        return true;
       }
     } catch (e) {
-      console.warn('Supabase addInvoice error, using fallback:', e);
+      console.warn('Supabase addInvoice sync error:', e);
     }
 
-    // 2. Local Express fallback
-    try {
-      const res = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(fullInv)
-      });
-      const data = await res.json();
-      if (data.success) {
-        addToast('Lưu hóa đơn thành công! Thông tin khách hàng đã được lưu.', 'success');
-        loadData();
-        if (hasPermission('invoicesList')) setActiveTab('invoicesList');
-        else setActiveTab('home');
-        return true;
-      }
-    } catch (err) {}
+    // 4. Persist to local express server
+    fetch('/api/invoices', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fullInv)
+    }).catch(() => {});
 
-    // 3. In-memory fallback
-    setInvoices(prev => [fullInv, ...prev]);
-    addToast('Lưu hóa đơn thành công!', 'success');
-    if (hasPermission('invoicesList')) setActiveTab('invoicesList');
-    else setActiveTab('home');
+    addToast('Lưu hóa đơn thành công! Thông tin khách hàng đã tự động xuất hiện tại Tab Khách hàng.', 'success');
+    if (hasPermission('invoicesList')) {
+      setActiveTab('invoicesList');
+    } else {
+      setActiveTab('home');
+    }
     return true;
   };
 

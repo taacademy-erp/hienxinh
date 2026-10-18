@@ -15,6 +15,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
+import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 
 export default function TabExpenses() {
   const {
@@ -658,12 +659,12 @@ export default function TabExpenses() {
                   Số tiền chi (VNĐ) <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   required
-                  value={formData.amount}
-                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                  placeholder="2000000"
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#C0001A] focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  value={formatCurrencyInput(formData.amount)}
+                  onChange={(e) => setFormData({ ...formData, amount: parseCurrencyInput(e.target.value) })}
+                  placeholder="1.500.000"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#C0001A] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                 />
               </div>
 
