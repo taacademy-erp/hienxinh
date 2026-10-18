@@ -98,14 +98,14 @@ export default function InvoiceDetailModal() {
                   <tr key={i}>
                     <td className="py-2.5 px-3 text-gray-500">{i + 1}</td>
                     <td className="py-2.5 px-3 font-semibold text-gray-900">{s.name}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-500 line-through">
+                    <td className="py-2.5 px-3 text-right text-gray-700 font-medium">
                       {formatCurrencyInput(s.listedPrice)} đ
                     </td>
-                    <td className="py-2.5 px-3 text-right font-medium">
-                      {formatCurrencyInput(s.discountPrice)} đ
+                    <td className="py-2.5 px-3 text-right font-medium text-emerald-600">
+                      {Number(s.discountPrice) > 0 ? `- ${formatCurrencyInput(s.discountPrice)} đ` : '0 đ'}
                     </td>
                     <td className="py-2.5 px-3 text-right font-extrabold text-[#E60026]">
-                      {formatCurrencyInput(s.total)} đ
+                      {formatCurrencyInput(s.total ?? Math.max(0, (s.listedPrice || 0) - (s.discountPrice || 0)))} đ
                     </td>
                   </tr>
                 ))}

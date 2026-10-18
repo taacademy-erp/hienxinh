@@ -36,13 +36,13 @@ export default function TabCreateInvoice() {
   const [customerDob, setCustomerDob] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
 
-  // Service line items
+  // Service line items (Thành tiền = Giá niêm yết - Giá khuyến mãi)
   const [serviceRows, setServiceRows] = useState([
     {
       id: 1,
       serviceName: 'Xử lý thâm',
       listedPrice: 2000000,
-      discountPrice: 2000000,
+      discountPrice: 0,
       total: 2000000,
       onlineStaff: '',
       onlineCommissionRate: 5,
@@ -104,7 +104,7 @@ export default function TabCreateInvoice() {
       id: Date.now(),
       serviceName: firstService.name,
       listedPrice: firstService.price,
-      discountPrice: firstService.price,
+      discountPrice: 0,
       total: firstService.price,
       onlineStaff: availableStaff[0]?.name || 'Nguyễn Thảo',
       onlineCommissionRate: 5,
@@ -131,26 +131,27 @@ export default function TabCreateInvoice() {
     const price = found ? found.price : 2000000;
     setServiceRows(serviceRows.map(r => {
       if (r.id === id) {
+        const discount = Number(r.discountPrice) || 0;
         return {
           ...r,
           serviceName,
           listedPrice: price,
-          discountPrice: price,
-          total: price
+          discountPrice: discount,
+          total: Math.max(0, price - discount)
         };
       }
       return r;
     }));
   };
 
-  // Update row values
+  // Update row values: thành tiền = giá niêm yết - giá khuyến mãi
   const handleRowChange = (id, field, value) => {
     setServiceRows(serviceRows.map(r => {
       if (r.id === id) {
         const updated = { ...r, [field]: value };
-        if (field === 'discountPrice') {
-          updated.total = Number(value) || 0;
-        }
+        const listed = field === 'listedPrice' ? (Number(value) || 0) : (Number(r.listedPrice) || 0);
+        const discount = field === 'discountPrice' ? (Number(value) || 0) : (Number(r.discountPrice) || 0);
+        updated.total = Math.max(0, listed - discount);
         return updated;
       }
       return r;
@@ -169,15 +170,17 @@ export default function TabCreateInvoice() {
     }
 
     const formattedServices = serviceRows.map(r => {
-      const actTotal = Number(r.discountPrice) || Number(r.listedPrice) || 0;
+      const listed = Number(r.listedPrice) || 0;
+      const discount = Number(r.discountPrice) || 0;
+      const actTotal = Math.max(0, listed - discount);
       const onlRate = Number(r.onlineCommissionRate) || 0;
       const dirRate = Number(r.directCommissionRate) || 0;
       const exeRate = Number(r.execCommissionRate) || 0;
 
       return {
         name: r.serviceName,
-        listedPrice: Number(r.listedPrice) || 0,
-        discountPrice: Number(r.discountPrice) || 0,
+        listedPrice: listed,
+        discountPrice: discount,
         total: actTotal,
         onlineStaff: r.onlineStaff,
         onlineCommissionRate: onlRate,
@@ -221,7 +224,7 @@ export default function TabCreateInvoice() {
           id: Date.now(),
           serviceName: availableServices[0]?.name || 'Xử lý thâm',
           listedPrice: availableServices[0]?.price || 2000000,
-          discountPrice: availableServices[0]?.price || 2000000,
+          discountPrice: 0,
           total: availableServices[0]?.price || 2000000,
           onlineStaff: '',
           onlineCommissionRate: 5,
@@ -389,8 +392,10 @@ export default function TabCreateInvoice() {
             </thead>
             <tbody>
               {serviceRows.map((row, index) => {
-                // Calculation on discounted price
-                const currentPrice = Number(row.discountPrice) || Number(row.listedPrice) || 0;
+                // Thành tiền = Giá niêm yết - Giá khuyến mãi
+                const listedAmt = Number(row.listedPrice) || 0;
+                const discountAmt = Number(row.discountPrice) || 0;
+                const currentPrice = Math.max(0, listedAmt - discountAmt);
                 const hasOnline = row.onlineStaff && row.onlineStaff !== 'Trống';
                 const hasDirect = row.directStaff && row.directStaff !== 'Trống';
                 const hasExec = row.execStaff && row.execStaff !== 'Trống';
@@ -435,8 +440,9 @@ export default function TabCreateInvoice() {
                     <td className="py-3 px-3">
                       <input
                         type="text"
-                        value={formatCurrencyInput(row.discountPrice)}
+                        value={row.discountPrice ? formatCurrencyInput(row.discountPrice) : ''}
                         onChange={(e) => handleRowChange(row.id, 'discountPrice', parseCurrencyInput(e.target.value))}
+                        placeholder="0"
                         className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                       />
                     </td>
