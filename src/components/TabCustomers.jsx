@@ -293,7 +293,7 @@ export default function TabCustomers() {
                     className="w-4 h-4 rounded text-[#E60026] focus:ring-rose-400 accent-[#E60026]"
                   />
                 </th>
-                <th className="py-3.5 px-3 w-12 text-gray-500 font-bold">#</th>
+                <th className="py-3.5 px-3 w-14 text-gray-500 font-bold">STT</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Họ và tên</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Ngày sinh</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">SĐT</th>

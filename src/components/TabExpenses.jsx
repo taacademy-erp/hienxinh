@@ -11,7 +11,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
-  FileText
+  FileText,
+  TrendingUp,
+  Coins,
+  Wallet
 } from 'lucide-react';
 
 export default function TabExpenses() {
@@ -19,12 +22,14 @@ export default function TabExpenses() {
     expenses,
     addExpense,
     deleteExpense,
-    loadData
+    loadData,
+    formatVND
   } = useApp();
 
   // Filters state
-  const [timeMode, setTimeMode] = useState('Ngày'); // 'Ngày' | 'Tháng'
-  const [dateFilter, setDateFilter] = useState('17/10/2026');
+  const [timeMode, setTimeMode] = useState('Ngày'); // 'Ngày' | 'Tháng' | 'Tất cả'
+  const [selectedDay, setSelectedDay] = useState('17/10/2026');
+  const [selectedMonth, setSelectedMonth] = useState('10/2026');
   const [categoryFilter, setCategoryFilter] = useState('Tất cả');
   const [selectedRows, setSelectedRows] = useState([]);
   const [pageSize, setPageSize] = useState(8);
@@ -61,21 +66,85 @@ export default function TabExpenses() {
     return [...list].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
   }, [expenses]);
 
-  // Filtered expenses
+  // Extract available days and months
+  const { availableMonths, availableDays } = useMemo(() => {
+    const monthsSet = new Set(['10/2026']);
+    const daysSet = new Set(['17/10/2026']);
+
+    allExpenses.forEach(exp => {
+      if (exp.date) {
+        daysSet.add(exp.date);
+        const parts = exp.date.split('/');
+        if (parts.length === 3) {
+          monthsSet.add(`${parts[1]}/${parts[2]}`);
+        }
+      }
+    });
+
+    const months = Array.from(monthsSet);
+    const days = Array.from(daysSet).sort((a, b) => {
+      const pA = a.split('/').map(Number);
+      const pB = b.split('/').map(Number);
+      return (pB[2] * 10000 + pB[1] * 100 + pB[0]) - (pA[2] * 10000 + pA[1] * 100 + pA[0]);
+    });
+
+    return { availableMonths: months, availableDays: days };
+  }, [allExpenses]);
+
+  // Effective day & month for summary cards
+  const effectiveDay = (timeMode === 'Ngày' && selectedDay !== 'all') ? selectedDay : (availableDays[0] || '17/10/2026');
+  const effectiveMonth = (timeMode === 'Tháng' && selectedMonth !== 'all') ? selectedMonth : (availableMonths[0] || '10/2026');
+
+  // Daily statistics
+  const dailyExpenses = useMemo(() => {
+    return allExpenses.filter(e => e.date === effectiveDay);
+  }, [allExpenses, effectiveDay]);
+  const dayTotal = useMemo(() => {
+    return dailyExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [dailyExpenses]);
+
+  // Monthly statistics
+  const monthlyExpenses = useMemo(() => {
+    return allExpenses.filter(e => (e.date || '').includes(effectiveMonth));
+  }, [allExpenses, effectiveMonth]);
+  const monthTotal = useMemo(() => {
+    return monthlyExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [monthlyExpenses]);
+
+  // Highest expense in the selected month
+  const maxExpenseInMonth = useMemo(() => {
+    if (monthlyExpenses.length === 0) return null;
+    return [...monthlyExpenses].sort((a, b) => (Number(b.amount) || 0) - (Number(a.amount) || 0))[0];
+  }, [monthlyExpenses]);
+
+  // Filtered expenses for table
   const filteredExpenses = useMemo(() => {
     return allExpenses.filter(e => {
       const matchCat = categoryFilter === 'Tất cả' || e.category === categoryFilter;
-      return matchCat;
+      let matchDate = true;
+      if (timeMode === 'Ngày' && selectedDay && selectedDay !== 'all') {
+        matchDate = e.date === selectedDay;
+      } else if (timeMode === 'Tháng' && selectedMonth && selectedMonth !== 'all') {
+        matchDate = (e.date || '').includes(selectedMonth);
+      }
+      return matchCat && matchDate;
     });
-  }, [allExpenses, categoryFilter]);
+  }, [allExpenses, categoryFilter, timeMode, selectedDay, selectedMonth]);
 
-  // Total count
-  const totalCount = 28; // Displayed as 28 in mockup
-  const totalPages = 4; // Mockup shows 1 2 3 4
-  const paginatedExpenses = filteredExpenses.slice(0, pageSize);
+  const filteredTotal = useMemo(() => {
+    return filteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
+  }, [filteredExpenses]);
+
+  // Pagination calculation
+  const totalItems = filteredExpenses.length;
+  const totalPages = Math.ceil(totalItems / pageSize) || 1;
+  const paginatedExpenses = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredExpenses.slice(start, start + pageSize);
+  }, [filteredExpenses, currentPage, pageSize]);
 
   const toggleSelectAll = () => {
-    if (selectedRows.length === paginatedExpenses.length) {
+    if (selectedRows.length === paginatedExpenses.length && paginatedExpenses.length > 0) {
       setSelectedRows([]);
     } else {
       setSelectedRows(paginatedExpenses.map(e => e.id));
@@ -93,7 +162,7 @@ export default function TabExpenses() {
   const handleOpenAdd = () => {
     setEditingExpense(null);
     setFormData({
-      date: '17/10/2026',
+      date: effectiveDay || '17/10/2026',
       content: '',
       category: 'Marketing',
       amount: '',
@@ -166,51 +235,190 @@ export default function TabExpenses() {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
-      {/* Filter Section Card (Exact soft pink container from mockup) */}
+    <div className="space-y-5 animate-in fade-in duration-200">
+      {/* 4 Summary Report Cards (Báo cáo tổng kết chi phí theo từng ngày và tháng) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {/* Ô 1: Tổng chi phí ngày */}
+        <div className="bg-white rounded-2xl p-4 border border-rose-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-16 h-16 bg-rose-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-600 font-serif">
+                Chi phí ngày ({effectiveDay})
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-rose-50 text-[#C0001A] flex items-center justify-center shadow-2xs">
+                <Calendar className="w-4 h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-xl font-extrabold text-[#C0001A] font-serif tracking-tight">
+                {formatVND ? formatVND(dayTotal) : `${dayTotal.toLocaleString('vi-VN')} đ`}
+              </div>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {dailyExpenses.length} khoản chi trong ngày
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Ô 2: Tổng chi phí tháng */}
+        <div className="bg-white rounded-2xl p-4 border border-indigo-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-16 h-16 bg-indigo-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-600 font-serif">
+                Tổng chi phí tháng ({effectiveMonth})
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-2xs">
+                <TrendingUp className="w-4 h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-xl font-extrabold text-indigo-700 font-serif tracking-tight">
+                {formatVND ? formatVND(monthTotal) : `${monthTotal.toLocaleString('vi-VN')} đ`}
+              </div>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {monthlyExpenses.length} khoản chi trong tháng
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Ô 3: Khoản chi lớn nhất tháng */}
+        <div className="bg-white rounded-2xl p-4 border border-amber-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-16 h-16 bg-amber-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-600 font-serif">
+                Chi lớn nhất ({effectiveMonth})
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-2xs">
+                <Coins className="w-4 h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-xl font-extrabold text-amber-700 font-serif tracking-tight truncate">
+                {maxExpenseInMonth ? (formatVND ? formatVND(maxExpenseInMonth.amount) : `${maxExpenseInMonth.amount.toLocaleString('vi-VN')} đ`) : '0 đ'}
+              </div>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5 truncate" title={maxExpenseInMonth?.content || ''}>
+                {maxExpenseInMonth ? `${maxExpenseInMonth.content} (${maxExpenseInMonth.category})` : 'Chưa có khoản chi'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Ô 4: Tổng theo bộ lọc */}
+        <div className="bg-white rounded-2xl p-4 border border-emerald-100/90 shadow-2xs hover:shadow-sm transition-all relative overflow-hidden group">
+          <div className="absolute -right-3 -top-3 w-16 h-16 bg-emerald-50 rounded-full opacity-60 group-hover:scale-110 transition-transform"></div>
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-600 font-serif">
+                Tổng theo bộ lọc
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shadow-2xs">
+                <Wallet className="w-4 h-4 stroke-[2.2]" />
+              </div>
+            </div>
+            <div className="mt-2.5">
+              <div className="text-xl font-extrabold text-emerald-700 font-serif tracking-tight">
+                {formatVND ? formatVND(filteredTotal) : `${filteredTotal.toLocaleString('vi-VN')} đ`}
+              </div>
+              <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+                {filteredExpenses.length} khoản chi hiển thị
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Section Card (Exact soft pink container from mockup with new Calendar & Month Dropdown) */}
       <div className="bg-[#FFF5F6] rounded-2xl p-4 sm:p-5 border border-rose-100/60 shadow-xs flex flex-wrap items-end justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-6">
-          {/* Thời gian */}
+        <div className="flex flex-wrap items-center gap-5">
+          {/* Chế độ lọc thời gian */}
           <div>
             <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif">
               Thời gian
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-gray-200/60 shadow-2xs">
               <button
-                onClick={() => setTimeMode('Ngày')}
-                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all shadow-xs ${
-                  timeMode === 'Ngày' ? 'bg-[#C0001A] text-white' : 'bg-white text-gray-700 border border-gray-200/60'
+                type="button"
+                onClick={() => { setTimeMode('Ngày'); setCurrentPage(1); }}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  timeMode === 'Ngày' ? 'bg-[#C0001A] text-white shadow-xs' : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
-                Ngày
+                Lọc theo ngày
               </button>
               <button
-                onClick={() => setTimeMode('Tháng')}
-                className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
-                  timeMode === 'Tháng' ? 'bg-[#C0001A] text-white' : 'bg-white text-gray-700 border border-gray-200/60 shadow-2xs'
+                type="button"
+                onClick={() => { setTimeMode('Tháng'); setCurrentPage(1); }}
+                className={`px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  timeMode === 'Tháng' ? 'bg-[#C0001A] text-white shadow-xs' : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
-                Tháng
+                Lọc theo tháng
               </button>
-
-              {/* Date Input with Calendar icon and Clear X */}
-              <div className="relative flex items-center bg-white rounded-lg px-3 py-2 border border-gray-200/60 shadow-2xs">
-                <Calendar className="w-3.5 h-3.5 text-gray-700 mr-2" />
-                <input
-                  type="text"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className="w-24 text-xs font-medium text-gray-800 bg-transparent focus:outline-none"
-                />
-                <button
-                  onClick={() => setDateFilter('')}
-                  className="ml-1 text-gray-400 hover:text-gray-700 text-xs font-bold"
-                >
-                  ×
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => { setTimeMode('Tất cả'); setSelectedDay('all'); setSelectedMonth('all'); setCurrentPage(1); }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  timeMode === 'Tất cả' ? 'bg-[#C0001A] text-white shadow-xs' : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Tất cả
+              </button>
             </div>
           </div>
+
+          {/* Thanh thả xuống: Lịch từng ngày trong tháng (khi chọn Lọc theo ngày) */}
+          {timeMode === 'Ngày' && (
+            <div>
+              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-[#C0001A]" />
+                <span>Lịch từng ngày trong tháng</span>
+              </span>
+              <div className="relative min-w-[200px]">
+                <select
+                  value={selectedDay}
+                  onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-white rounded-lg px-3.5 py-2 pr-8 border border-rose-200/90 shadow-2xs text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 appearance-none"
+                >
+                  <option value="all">Tất cả ngày trong tháng</option>
+                  {availableDays.map(d => (
+                    <option key={d} value={d}>Ngày {d}</option>
+                  ))}
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-xs">
+                  ▼
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Thanh thả xuống: Lọc theo tháng (khi chọn Lọc theo tháng) */}
+          {timeMode === 'Tháng' && (
+            <div>
+              <span className="block text-xs font-semibold text-[#0F172A] mb-1.5 font-serif flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-[#C0001A]" />
+                <span>Chọn tháng</span>
+              </span>
+              <div className="relative min-w-[170px]">
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => { setSelectedMonth(e.target.value); setCurrentPage(1); }}
+                  className="w-full bg-white rounded-lg px-3.5 py-2 pr-8 border border-rose-200/90 shadow-2xs text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 appearance-none"
+                >
+                  <option value="all">Tất cả các tháng</option>
+                  {availableMonths.map(m => (
+                    <option key={m} value={m}>Tháng {m}</option>
+                  ))}
+                </select>
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500 text-xs">
+                  ▼
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Danh mục */}
           <div>
@@ -221,7 +429,7 @@ export default function TabExpenses() {
               <select
                 value={categoryFilter}
                 onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-                className="bg-white rounded-lg px-3.5 py-2 pr-8 border border-gray-200/60 shadow-2xs text-xs font-medium text-gray-800 focus:outline-none appearance-none min-w-[170px]"
+                className="bg-white rounded-lg px-3.5 py-2 pr-8 border border-gray-200/60 shadow-2xs text-xs font-medium text-gray-800 focus:outline-none appearance-none min-w-[160px]"
               >
                 <option value="Tất cả">Tất cả</option>
                 <option value="Marketing">Marketing</option>
@@ -240,9 +448,13 @@ export default function TabExpenses() {
         {/* Buttons: Làm mới & + Thêm chi phí */}
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => {
-              setDateFilter('17/10/2026');
+              setTimeMode('Ngày');
+              setSelectedDay('17/10/2026');
+              setSelectedMonth('10/2026');
               setCategoryFilter('Tất cả');
+              setCurrentPage(1);
               loadData();
             }}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#FFF0F2] hover:bg-rose-100/80 border border-rose-200/80 text-[#C0001A] rounded-lg text-xs font-semibold transition-all shadow-2xs"
@@ -252,6 +464,7 @@ export default function TabExpenses() {
           </button>
 
           <button
+            type="button"
             onClick={handleOpenAdd}
             className="inline-flex items-center gap-2 px-4 py-2 bg-[#C0001A] hover:bg-[#a80017] text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
           >
@@ -269,7 +482,7 @@ export default function TabExpenses() {
             <FileText className="w-4 h-4 stroke-[2.2]" />
           </div>
           <h2 className="text-base font-bold text-[#C0001A] font-sans">
-            Danh sách chi phí (28)
+            Danh sách chi phí ({filteredExpenses.length})
           </h2>
         </div>
 
@@ -287,7 +500,7 @@ export default function TabExpenses() {
                       className="w-4 h-4 rounded text-[#C0001A] focus:ring-rose-400 accent-[#C0001A]"
                     />
                   </th>
-                  <th className="py-3.5 px-3 w-10 text-gray-800 font-bold">#</th>
+                  <th className="py-3.5 px-3 w-12 text-gray-800 font-bold">STT</th>
                   <th className="py-3.5 px-4 font-bold text-gray-900">
                     <div className="inline-flex items-center gap-1">
                       <span>Ngày chi</span>
@@ -307,101 +520,119 @@ export default function TabExpenses() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100/70">
-                {paginatedExpenses.map((exp, idx) => {
-                  const isChecked = selectedRows.includes(exp.id);
-                  return (
-                    <tr
-                      key={exp.id}
-                      className={`hover:bg-[#FFF5F6]/40 transition-colors ${isChecked ? 'bg-[#FFF5F6]/60' : ''}`}
-                    >
-                      <td className="py-3.5 pl-6 pr-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSelectRow(exp.id)}
-                          className="w-4 h-4 rounded text-[#C0001A] focus:ring-rose-400 accent-[#C0001A]"
-                        />
-                      </td>
-                      <td className="py-3.5 px-3 text-gray-800 font-medium font-serif">{idx + 1}</td>
-                      <td className="py-3.5 px-4 text-gray-700 font-medium font-serif">{exp.date}</td>
-                      <td className="py-3.5 px-4 font-semibold text-gray-900 font-serif">{exp.content}</td>
-                      <td className="py-3.5 px-4">{renderCategoryBadge(exp.category)}</td>
-                      <td className="py-3.5 px-4">
-                        <span className="font-extrabold text-[#C0001A] text-xs font-serif">
-                          {Number(exp.amount).toLocaleString('en-US')}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-gray-600 text-xs font-serif">{exp.note}</td>
-                      <td className="py-3.5 pr-6 pl-4 text-center relative">
-                        <div className="relative inline-block text-left">
-                          <button
-                            onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
-                            className="p-1 text-gray-500 hover:text-gray-800 rounded transition-colors"
-                          >
-                            <MoreHorizontal className="w-4 h-4" />
-                          </button>
+                {paginatedExpenses.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-gray-400 font-serif">
+                      Không tìm thấy khoản chi phí nào phù hợp với bộ lọc.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedExpenses.map((exp, idx) => {
+                    const isChecked = selectedRows.includes(exp.id);
+                    const itemStt = (currentPage - 1) * pageSize + idx + 1;
+                    return (
+                      <tr
+                        key={exp.id}
+                        className={`hover:bg-[#FFF5F6]/40 transition-colors ${isChecked ? 'bg-[#FFF5F6]/60' : ''}`}
+                      >
+                        <td className="py-3.5 pl-6 pr-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => toggleSelectRow(exp.id)}
+                            className="w-4 h-4 rounded text-[#C0001A] focus:ring-rose-400 accent-[#C0001A]"
+                          />
+                        </td>
+                        <td className="py-3.5 px-3 text-gray-800 font-medium font-serif">{itemStt}</td>
+                        <td className="py-3.5 px-4 text-gray-700 font-medium font-serif">{exp.date}</td>
+                        <td className="py-3.5 px-4 font-semibold text-gray-900 font-serif">{exp.content}</td>
+                        <td className="py-3.5 px-4">{renderCategoryBadge(exp.category)}</td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-extrabold text-[#C0001A] text-xs font-serif">
+                            {Number(exp.amount).toLocaleString('en-US')}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-gray-600 text-xs font-serif">{exp.note}</td>
+                        <td className="py-3.5 pr-6 pl-4 text-center relative">
+                          <div className="relative inline-block text-left">
+                            <button
+                              type="button"
+                              onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
+                              className="p-1 text-gray-500 hover:text-gray-800 rounded transition-colors"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
 
-                          {activeMenuId === exp.id && (
-                            <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
-                              <button
-                                onClick={() => handleOpenEdit(exp)}
-                                className="w-full px-3 py-1.5 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                                <span>Chỉnh sửa</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  deleteExpense(exp.id);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3 py-1.5 text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                <span>Xóa chi phí</span>
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                            {activeMenuId === exp.id && (
+                              <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(exp)}
+                                  className="w-full px-3 py-1.5 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                                  <span>Chỉnh sửa</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    deleteExpense(exp.id);
+                                    setActiveMenuId(null);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                                  <span>Xóa chi phí</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Pagination Footer exact to mockup */}
+        {/* Pagination Footer */}
         <div className="pt-2 px-2 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#334155] font-serif">
           <div>
-            Hiển thị 1 - 8 / 28 chi phí
+            Hiển thị {totalItems > 0 ? (currentPage - 1) * pageSize + 1 : 0} - {Math.min(currentPage * pageSize, totalItems)} / {totalItems} chi phí
           </div>
 
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow-2xs"
+              disabled={currentPage === 1}
+              className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow-2xs disabled:opacity-40"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
             </button>
 
-            <button className="w-7 h-7 rounded-lg bg-[#C0001A] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-              1
-            </button>
-            <button className="w-7 h-7 rounded-lg bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-center shadow-2xs hover:bg-gray-50">
-              2
-            </button>
-            <button className="w-7 h-7 rounded-lg bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-center shadow-2xs hover:bg-gray-50">
-              3
-            </button>
-            <button className="w-7 h-7 rounded-lg bg-white border border-gray-200 text-gray-700 text-xs flex items-center justify-center shadow-2xs hover:bg-gray-50">
-              4
-            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => setCurrentPage(page)}
+                className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center transition-all ${
+                  currentPage === page
+                    ? 'bg-[#C0001A] text-white shadow-xs'
+                    : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 shadow-2xs'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
 
             <button
+              type="button"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow-2xs"
+              disabled={currentPage === totalPages}
+              className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 shadow-2xs disabled:opacity-40"
             >
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
@@ -412,7 +643,7 @@ export default function TabExpenses() {
             <div className="relative">
               <select
                 value={pageSize}
-                onChange={(e) => setPageSize(Number(e.target.value))}
+                onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
                 className="bg-white border border-gray-200 rounded-lg px-2.5 py-1 pr-6 text-xs text-gray-800 shadow-2xs appearance-none focus:outline-none"
               >
                 <option value="8">8</option>
@@ -437,6 +668,7 @@ export default function TabExpenses() {
                 {editingExpense ? 'Chỉnh sửa khoản chi phí' : 'Thêm khoản chi phí mới'}
               </h3>
               <button
+                type="button"
                 onClick={() => setIsModalOpen(false)}
                 className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
               >

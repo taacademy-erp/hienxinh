@@ -160,10 +160,51 @@ app.get('/api/staff', (req, res) => {
   res.json(db.staff || []);
 });
 
+app.post('/api/staff', (req, res) => {
+  const db = readDB();
+  const { name, role, phone } = req.body;
+  if (!name) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập tên nhân viên.' });
+  }
+  const initials = name.trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const newStaff = {
+    id: 'NV' + String((db.staff || []).length + 1).padStart(2, '0'),
+    name: name.trim(),
+    role: role || 'Tư vấn & Kỹ thuật viên',
+    phone: phone || '',
+    initials,
+    color: 'bg-rose-600'
+  };
+  if (!db.staff) db.staff = [];
+  db.staff.push(newStaff);
+  writeDB(db);
+  res.json({ success: true, staff: newStaff });
+});
+
 // Bank Accounts API
 app.get('/api/bank-accounts', (req, res) => {
   const db = readDB();
   res.json(db.bankAccounts || []);
+});
+
+app.post('/api/bank-accounts', (req, res) => {
+  const db = readDB();
+  const { bankName, accountNumber, accountHolder, name } = req.body;
+  if (!accountNumber || !bankName) {
+    return res.status(400).json({ success: false, message: 'Vui lòng nhập thông tin ngân hàng.' });
+  }
+  const newAccount = {
+    id: 'acc' + ((db.bankAccounts || []).length + 1),
+    name: name || `${bankName} Spa`,
+    bankName,
+    accountNumber,
+    accountHolder: (accountHolder || 'HIEN XINH').toUpperCase(),
+    balance: 0
+  };
+  if (!db.bankAccounts) db.bankAccounts = [];
+  db.bankAccounts.push(newAccount);
+  writeDB(db);
+  res.json({ success: true, account: newAccount });
 });
 
 // Invoices API

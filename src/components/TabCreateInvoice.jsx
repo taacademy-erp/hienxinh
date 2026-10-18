@@ -10,13 +10,18 @@ import {
   Lock,
   Calendar,
   Sparkles,
-  Search
+  Search,
+  Building2,
+  X
 } from 'lucide-react';
 
 export default function TabCreateInvoice() {
   const {
     services: availableServices,
     staff: availableStaff,
+    addStaff,
+    bankAccounts: availableBanks,
+    addBankAccount,
     customers,
     addInvoice,
     formatVND,
@@ -30,14 +35,14 @@ export default function TabCreateInvoice() {
   const [customerDob, setCustomerDob] = useState('12/05/2005');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
 
-  // Service line items
+  // Service line items (Real spa services, removed model kids/phong thai/catwalk)
   const [serviceRows, setServiceRows] = useState([
     {
       id: 1,
-      serviceName: 'Khóa Model Kids (20 buổi)',
-      listedPrice: 10000000,
-      discountPrice: 8000000,
-      total: 8000000,
+      serviceName: 'Xử lý thâm',
+      listedPrice: 2000000,
+      discountPrice: 1800000,
+      total: 1800000,
       onlineStaff: 'Nguyễn Thảo',
       onlineCommissionRate: 5,
       directStaff: 'Trần Minh Anh',
@@ -47,10 +52,10 @@ export default function TabCreateInvoice() {
     },
     {
       id: 2,
-      serviceName: 'Khóa Phong thái (8 buổi)',
-      listedPrice: 6000000,
-      discountPrice: 5000000,
-      total: 5000000,
+      serviceName: 'Phun môi Tế bào gốc',
+      listedPrice: 3300000,
+      discountPrice: 3000000,
+      total: 3000000,
       onlineStaff: 'Nguyễn Thảo',
       onlineCommissionRate: 5,
       directStaff: 'Trần Minh Anh',
@@ -60,10 +65,10 @@ export default function TabCreateInvoice() {
     },
     {
       id: 3,
-      serviceName: 'Khóa Catwalk (12 buổi)',
-      listedPrice: 8000000,
-      discountPrice: 6500000,
-      total: 6500000,
+      serviceName: 'Chân mày điêu khắc sợi hairtrokes',
+      listedPrice: 3000000,
+      discountPrice: 2700000,
+      total: 2700000,
       onlineStaff: 'Nguyễn Thảo',
       onlineCommissionRate: 5,
       directStaff: 'Trần Minh Anh',
@@ -72,6 +77,13 @@ export default function TabCreateInvoice() {
       execCommissionRate: 15
     }
   ]);
+
+  // Modals state for Staff and Bank
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [newStaffForm, setNewStaffForm] = useState({ name: '', role: 'Tư vấn viên', phone: '' });
+
+  const [isBankModalOpen, setIsBankModalOpen] = useState(false);
+  const [newBankForm, setNewBankForm] = useState({ bankName: '', accountNumber: '', accountHolder: '', name: '' });
 
   // Payment fields
   const [paymentMethod, setPaymentMethod] = useState('Chuyển khoản');
@@ -320,15 +332,27 @@ export default function TabCreateInvoice() {
             </h2>
           </div>
 
-          {/* Add Service Button */}
-          <button
-            type="button"
-            onClick={handleAddRow}
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#E60026] hover:bg-[#c90021] text-white text-xs font-semibold rounded-xl shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Thêm dịch vụ</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Add Staff Button */}
+            <button
+              type="button"
+              onClick={() => setIsStaffModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-[#E60026] border border-rose-200 text-xs font-semibold rounded-xl transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>+ Thêm nhân viên</span>
+            </button>
+
+            {/* Add Service Button */}
+            <button
+              type="button"
+              onClick={handleAddRow}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#E60026] hover:bg-[#c90021] text-white text-xs font-semibold rounded-xl shadow-md shadow-rose-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Thêm dịch vụ</span>
+            </button>
+          </div>
         </div>
 
         {/* Services Table */}
@@ -336,7 +360,7 @@ export default function TabCreateInvoice() {
           <table className="w-full text-left text-sm border-separate border-spacing-y-2">
             <thead>
               <tr className="text-xs font-bold text-gray-600 border-b border-gray-100">
-                <th className="pb-3 px-2 w-8 text-center">#</th>
+                <th className="pb-3 px-2 w-10 text-center font-bold">STT</th>
                 <th className="pb-3 px-3 min-w-[200px]">Dịch vụ</th>
                 <th className="pb-3 px-3 min-w-[120px]">Giá niêm yết</th>
                 <th className="pb-3 px-3 min-w-[120px]">Giá khuyến mãi</th>
@@ -360,9 +384,13 @@ export default function TabCreateInvoice() {
               {serviceRows.map((row, index) => {
                 // Calculation on discounted price
                 const currentPrice = Number(row.discountPrice) || Number(row.listedPrice) || 0;
-                const onlineCommAmt = Math.round((currentPrice * (Number(row.onlineCommissionRate) || 0)) / 100);
-                const directCommAmt = Math.round((currentPrice * (Number(row.directCommissionRate) || 0)) / 100);
-                const execCommAmt = Math.round((currentPrice * (Number(row.execCommissionRate) || 0)) / 100);
+                const hasOnline = row.onlineStaff && row.onlineStaff !== 'Trống';
+                const hasDirect = row.directStaff && row.directStaff !== 'Trống';
+                const hasExec = row.execStaff && row.execStaff !== 'Trống';
+
+                const onlineCommAmt = hasOnline ? Math.round((currentPrice * (Number(row.onlineCommissionRate) || 0)) / 100) : 0;
+                const directCommAmt = hasDirect ? Math.round((currentPrice * (Number(row.directCommissionRate) || 0)) / 100) : 0;
+                const execCommAmt = hasExec ? Math.round((currentPrice * (Number(row.execCommissionRate) || 0)) / 100) : 0;
 
                 return (
                   <tr key={row.id} className="bg-gray-50/50 hover:bg-rose-50/20 rounded-xl transition-colors">
@@ -421,6 +449,7 @@ export default function TabCreateInvoice() {
                           onChange={(e) => handleRowChange(row.id, 'onlineStaff', e.target.value)}
                           className="w-full px-2 py-1 bg-gray-50/50 border border-gray-200 rounded-lg text-xs font-medium"
                         >
+                          <option value="">Trống (Không chọn)</option>
                           {availableStaff.map(s => (
                             <option key={s.id} value={s.name}>{s.name}</option>
                           ))}
@@ -430,13 +459,14 @@ export default function TabCreateInvoice() {
                             type="number"
                             min="0"
                             max="100"
+                            disabled={!hasOnline}
                             value={row.onlineCommissionRate}
                             onChange={(e) => handleRowChange(row.id, 'onlineCommissionRate', Number(e.target.value))}
                             placeholder="%"
-                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold"
+                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
                           />
                           <span className="text-[11px] text-gray-400 font-semibold">%</span>
-                          <span className="text-xs font-bold text-emerald-600 ml-auto whitespace-nowrap">
+                          <span className={`text-xs font-bold ml-auto whitespace-nowrap ${hasOnline ? 'text-emerald-600' : 'text-gray-400'}`}>
                             + {formatNumber(onlineCommAmt)} đ
                           </span>
                         </div>
@@ -451,6 +481,7 @@ export default function TabCreateInvoice() {
                           onChange={(e) => handleRowChange(row.id, 'directStaff', e.target.value)}
                           className="w-full px-2 py-1 bg-gray-50/50 border border-gray-200 rounded-lg text-xs font-medium"
                         >
+                          <option value="">Trống (Không chọn)</option>
                           {availableStaff.map(s => (
                             <option key={s.id} value={s.name}>{s.name}</option>
                           ))}
@@ -460,13 +491,14 @@ export default function TabCreateInvoice() {
                             type="number"
                             min="0"
                             max="100"
+                            disabled={!hasDirect}
                             value={row.directCommissionRate}
                             onChange={(e) => handleRowChange(row.id, 'directCommissionRate', Number(e.target.value))}
                             placeholder="%"
-                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold"
+                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
                           />
                           <span className="text-[11px] text-gray-400 font-semibold">%</span>
-                          <span className="text-xs font-bold text-emerald-600 ml-auto whitespace-nowrap">
+                          <span className={`text-xs font-bold ml-auto whitespace-nowrap ${hasDirect ? 'text-emerald-600' : 'text-gray-400'}`}>
                             + {formatNumber(directCommAmt)} đ
                           </span>
                         </div>
@@ -481,6 +513,7 @@ export default function TabCreateInvoice() {
                           onChange={(e) => handleRowChange(row.id, 'execStaff', e.target.value)}
                           className="w-full px-2 py-1 bg-gray-50/50 border border-gray-200 rounded-lg text-xs font-medium"
                         >
+                          <option value="">Trống (Không chọn)</option>
                           {availableStaff.map(s => (
                             <option key={s.id} value={s.name}>{s.name}</option>
                           ))}
@@ -490,13 +523,14 @@ export default function TabCreateInvoice() {
                             type="number"
                             min="0"
                             max="100"
+                            disabled={!hasExec}
                             value={row.execCommissionRate}
                             onChange={(e) => handleRowChange(row.id, 'execCommissionRate', Number(e.target.value))}
                             placeholder="%"
-                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold"
+                            className="w-14 px-1.5 py-1 bg-white border border-gray-200 rounded-md text-xs text-center font-bold disabled:bg-gray-100 disabled:text-gray-400"
                           />
                           <span className="text-[11px] text-gray-400 font-semibold">%</span>
-                          <span className="text-xs font-bold text-emerald-600 ml-auto whitespace-nowrap">
+                          <span className={`text-xs font-bold ml-auto whitespace-nowrap ${hasExec ? 'text-emerald-600' : 'text-gray-400'}`}>
                             + {formatNumber(execCommAmt)} đ
                           </span>
                         </div>
@@ -582,20 +616,54 @@ export default function TabCreateInvoice() {
           </div>
 
           {/* Bank Account Selection */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Tài khoản ngân hàng nhận tiền <span className="text-red-500">*</span>
-            </label>
+          <div className="col-span-1 md:col-span-2">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-gray-700">
+                Tài khoản ngân hàng nhận tiền <span className="text-red-500">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsBankModalOpen(true)}
+                className="text-xs text-[#E60026] hover:text-[#b8001e] font-semibold flex items-center gap-1 hover:underline"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>+ Thông tin ngân hàng</span>
+              </button>
+            </div>
             <select
               value={bankAccount}
               onChange={(e) => setBankAccount(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
             >
-              <option value="Vietcombank Spa">Vietcombank Spa</option>
-              <option value="Techcombank Spa">Techcombank Spa</option>
-              <option value="Tiền mặt tại quầy">Tiền mặt tại quầy</option>
-              <option value="Chuyển khoản">Chuyển khoản</option>
+              {(availableBanks || []).map(b => (
+                <option key={b.id} value={b.name}>
+                  {b.name} {b.accountNumber && b.accountNumber !== 'TIENMAT' ? `(${b.bankName || ''} - STK: ${b.accountNumber} - ${b.accountHolder || ''})` : ''}
+                </option>
+              ))}
             </select>
+
+            {/* Display detailed bank information (STK - Chủ tài khoản - Ngân hàng) */}
+            {(() => {
+              const activeBank = (availableBanks || []).find(b => b.name === bankAccount) || (availableBanks || [])[0];
+              if (!activeBank) return null;
+              return (
+                <div className="mt-2.5 p-3 rounded-xl bg-[#FFF5F6] border border-rose-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-[#E60026]" />
+                    <span className="text-gray-500">Ngân hàng:</span>
+                    <strong className="text-gray-900">{activeBank.bankName || activeBank.name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">STK:</span>
+                    <strong className="font-mono text-[#E60026] ml-1">{activeBank.accountNumber || '—'}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Chủ tài khoản:</span>
+                    <strong className="text-gray-900 ml-1">{activeBank.accountHolder || '—'}</strong>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
@@ -620,6 +688,199 @@ export default function TabCreateInvoice() {
           </button>
         </div>
       </div>
+
+      {/* MODAL: Thêm nhân viên mới */}
+      {isStaffModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <User className="w-5 h-5 text-[#E60026]" />
+                <span>Thêm nhân viên mới</span>
+              </h3>
+              <button
+                onClick={() => setIsStaffModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newStaffForm.name.trim()) return;
+                await addStaff(newStaffForm);
+                setNewStaffForm({ name: '', role: 'Tư vấn viên', phone: '' });
+                setIsStaffModalOpen(false);
+              }}
+              className="mt-4 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Họ và tên nhân viên <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newStaffForm.name}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, name: e.target.value })}
+                  placeholder="Ví dụ: Hoàng Thu Trang"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Chức vụ / Vai trò</label>
+                <select
+                  value={newStaffForm.role}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, role: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  <option value="Tư vấn Online & Trực tiếp">Tư vấn Online & Trực tiếp</option>
+                  <option value="Tư vấn Online">Tư vấn Online</option>
+                  <option value="Tư vấn trực tiếp">Tư vấn trực tiếp</option>
+                  <option value="Kỹ thuật viên chính">Kỹ thuật viên chính</option>
+                  <option value="Kỹ thuật viên phun xăm">Kỹ thuật viên phun xăm</option>
+                  <option value="Chuyên viên chăm sóc da">Chuyên viên chăm sóc da</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">Số điện thoại</label>
+                <input
+                  type="text"
+                  value={newStaffForm.phone}
+                  onChange={(e) => setNewStaffForm({ ...newStaffForm, phone: e.target.value })}
+                  placeholder="09xx xxx xxx"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsStaffModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 text-xs"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#E60026] text-white rounded-xl font-semibold hover:bg-[#c90021] text-xs shadow-md shadow-rose-600/20"
+                >
+                  Lưu nhân viên
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Thêm thông tin ngân hàng mới */}
+      {isBankModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-rose-100 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-[#E60026]" />
+                <span>+ Thông tin ngân hàng nhận tiền</span>
+              </h3>
+              <button
+                onClick={() => setIsBankModalOpen(false)}
+                className="text-gray-400 hover:text-gray-700 p-1 rounded-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newBankForm.bankName.trim() || !newBankForm.accountNumber.trim()) return;
+                const created = await addBankAccount(newBankForm);
+                if (created) {
+                  setBankAccount(created.name);
+                }
+                setNewBankForm({ bankName: '', accountNumber: '', accountHolder: '', name: '' });
+                setIsBankModalOpen(false);
+              }}
+              className="mt-4 space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Tên ngân hàng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newBankForm.bankName}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, bankName: e.target.value })}
+                  placeholder="Ví dụ: Vietcombank, MB Bank, Techcombank..."
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Số tài khoản (STK) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newBankForm.accountNumber}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, accountNumber: e.target.value })}
+                  placeholder="Ví dụ: 1023456789"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Tên chủ tài khoản <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newBankForm.accountHolder}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, accountHolder: e.target.value.toUpperCase() })}
+                  placeholder="Ví dụ: NGUYEN THI HIEN"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm uppercase focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-gray-700 mb-1">
+                  Tên hiển thị gọi nhớ (Tùy chọn)
+                </label>
+                <input
+                  type="text"
+                  value={newBankForm.name}
+                  onChange={(e) => setNewBankForm({ ...newBankForm, name: e.target.value })}
+                  placeholder="Ví dụ: Vietcombank Spa Chính"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsBankModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 text-xs"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#E60026] text-white rounded-xl font-semibold hover:bg-[#c90021] text-xs shadow-md shadow-rose-600/20"
+                >
+                  Lưu tài khoản
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

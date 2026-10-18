@@ -17,6 +17,7 @@ import {
 export default function TabInvoicesList() {
   const {
     invoices,
+    services,
     deleteInvoice,
     setActiveTab,
     formatNumber,
@@ -50,15 +51,41 @@ export default function TabInvoicesList() {
   // Filters
   const [search, setSearch] = useState('');
   const [selectedService, setSelectedService] = useState('Tất cả');
-  const [filterDate, setFilterDate] = useState('');
+  const [timeMode, setTimeMode] = useState('all'); // 'all', 'day', 'month'
+  const [selectedMonth, setSelectedMonth] = useState('10/2026');
+  const [selectedDay, setSelectedDay] = useState('all');
   const [selectedRows, setSelectedRows] = useState([]);
   const [pageSize, setPageSize] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
   const [activeMenuId, setActiveMenuId] = useState(null);
 
+  // Extract available months and days from invoices
+  const { availableMonths, availableDays } = useMemo(() => {
+    const monthsSet = new Set(['10/2026', '09/2026']);
+    const daysSet = new Set();
+    (invoices || []).forEach(inv => {
+      if (inv.date) {
+        daysSet.add(inv.date);
+        const parts = inv.date.split('/');
+        if (parts.length === 3) {
+          monthsSet.add(`${parts[1]}/${parts[2]}`);
+        }
+      }
+    });
+
+    const months = Array.from(monthsSet);
+    const days = Array.from(daysSet).sort((a, b) => {
+      const pA = a.split('/').map(Number);
+      const pB = b.split('/').map(Number);
+      return (pB[2] * 10000 + pB[1] * 100 + pB[0]) - (pA[2] * 10000 + pA[1] * 100 + pA[0]);
+    });
+
+    return { availableMonths: months, availableDays: days };
+  }, [invoices]);
+
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(inv => {
+    return (invoices || []).filter(inv => {
       const q = search.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -66,10 +93,18 @@ export default function TabInvoicesList() {
         inv.customerName.toLowerCase().includes(q) ||
         inv.customerPhone.replace(/\s+/g, '').includes(q.replace(/\s+/g, ''));
       const matchService = selectedService === 'Tất cả' || (inv.serviceSummary || '').includes(selectedService);
-      const matchDate = !filterDate || inv.date.includes(filterDate);
+      
+      // Date filtering
+      let matchDate = true;
+      if (timeMode === 'day' && selectedDay && selectedDay !== 'all') {
+        matchDate = inv.date === selectedDay || (inv.date || '').startsWith(selectedDay);
+      } else if (timeMode === 'month' && selectedMonth && selectedMonth !== 'all') {
+        matchDate = (inv.date || '').includes(selectedMonth);
+      }
+
       return matchSearch && matchService && matchDate;
     });
-  }, [invoices, search, selectedService, filterDate]);
+  }, [invoices, search, selectedService, timeMode, selectedDay, selectedMonth]);
 
   // Pagination
   const totalItems = filteredInvoices.length;
@@ -110,7 +145,7 @@ export default function TabInvoicesList() {
       {/* Filter Bar */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-wrap items-center gap-3">
         {/* Search */}
-        <div className="flex-1 min-w-[240px]">
+        <div className="flex-1 min-w-[220px]">
           <div className="relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
@@ -123,19 +158,76 @@ export default function TabInvoicesList() {
           </div>
         </div>
 
-        {/* Date Filter */}
-        <div className="w-40 relative">
-          <input
-            type="text"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            placeholder="Ngày (dd/mm/yyyy)"
-            className="w-full pl-9 pr-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
-          />
-          <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+        {/* Time Filter Mode Toggle */}
+        <div className="flex items-center bg-gray-100/90 p-1 rounded-xl border border-gray-200 text-xs">
+          <button
+            type="button"
+            onClick={() => { setTimeMode('day'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 font-semibold rounded-lg transition-all ${
+              timeMode === 'day' ? 'bg-[#E60026] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Lọc theo ngày
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTimeMode('month'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 font-semibold rounded-lg transition-all ${
+              timeMode === 'month' ? 'bg-[#E60026] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Lọc theo tháng
+          </button>
+          <button
+            type="button"
+            onClick={() => { setTimeMode('all'); setSelectedDay('all'); setSelectedMonth('all'); setCurrentPage(1); }}
+            className={`px-3 py-1.5 font-semibold rounded-lg transition-all ${
+              timeMode === 'all' ? 'bg-[#E60026] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Tất cả
+          </button>
         </div>
 
-        {/* Service Filter */}
+        {/* If Day Mode: Dropdown listing calendar dates */}
+        {timeMode === 'day' && (
+          <div className="relative min-w-[190px]">
+            <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-[#E60026] font-bold">
+              Lịch từng ngày trong tháng
+            </span>
+            <select
+              value={selectedDay}
+              onChange={(e) => { setSelectedDay(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 bg-rose-50/40 border border-rose-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
+            >
+              <option value="all">Tất cả ngày trong tháng</option>
+              {availableDays.map(d => (
+                <option key={d} value={d}>Ngày {d}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* If Month Mode: Dropdown listing months */}
+        {timeMode === 'month' && (
+          <div className="relative min-w-[170px]">
+            <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-[#E60026] font-bold">
+              Chọn tháng
+            </span>
+            <select
+              value={selectedMonth}
+              onChange={(e) => { setSelectedMonth(e.target.value); setCurrentPage(1); }}
+              className="w-full px-3 py-2 bg-rose-50/40 border border-rose-200 rounded-xl text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
+            >
+              <option value="all">Tất cả các tháng</option>
+              {availableMonths.map(m => (
+                <option key={m} value={m}>Tháng {m}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Service Filter (Dynamic list) */}
         <div className="w-48">
           <div className="relative">
             <span className="absolute -top-2 left-2 px-1 bg-white text-[10px] text-gray-400 font-medium">Dịch vụ</span>
@@ -144,13 +236,10 @@ export default function TabInvoicesList() {
               onChange={(e) => { setSelectedService(e.target.value); setCurrentPage(1); }}
               className="w-full px-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
             >
-              <option value="Tất cả">Tất cả</option>
-              <option value="Khóa Model Kids">Khóa Model Kids</option>
-              <option value="Khóa Phong thái">Khóa Phong thái</option>
-              <option value="Khóa Catwalk">Khóa Catwalk</option>
-              <option value="Phun môi">Phun môi</option>
-              <option value="Chân mày">Chân mày</option>
-              <option value="Chăm sóc da">Chăm sóc da</option>
+              <option value="Tất cả">Tất cả dịch vụ</option>
+              {(services || []).map(srv => (
+                <option key={srv.id} value={srv.name}>{srv.name}</option>
+              ))}
             </select>
           </div>
         </div>
@@ -160,7 +249,9 @@ export default function TabInvoicesList() {
           onClick={() => {
             setSearch('');
             setSelectedService('Tất cả');
-            setFilterDate('');
+            setTimeMode('all');
+            setSelectedDay('all');
+            setSelectedMonth('all');
             loadData();
           }}
           className="inline-flex items-center gap-1.5 px-4 py-2 border border-rose-200 text-[#E60026] hover:bg-rose-50 rounded-xl text-sm font-semibold transition-all"
@@ -206,7 +297,7 @@ export default function TabInvoicesList() {
                     className="w-4 h-4 rounded text-[#E60026] focus:ring-rose-400 accent-[#E60026]"
                   />
                 </th>
-                <th className="py-3.5 px-3 w-10 text-gray-500 font-bold">#</th>
+                <th className="py-3.5 px-3 w-12 text-gray-500 font-bold">STT</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Mã hóa đơn</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Ngày lập</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Họ và tên khách hàng</th>

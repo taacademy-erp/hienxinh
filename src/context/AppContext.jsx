@@ -12,9 +12,6 @@ const DEFAULT_SERVICES = [
   { id: 'DV06', name: 'Chân mày điêu khắc đầu + phun shaddinh đuôi', price: 2800000, category: 'Phun xăm thẩm mỹ' },
   { id: 'DV07', name: 'Chân mày điêu khắc sợi hairtrokes', price: 3000000, category: 'Phun xăm thẩm mỹ' },
   { id: 'DV08', name: 'Chân mày sợi nét siêu thực', price: 4000000, category: 'Phun xăm thẩm mỹ' },
-  { id: 'DV09', name: 'Khóa Model Kids (20 buổi)', price: 10000000, category: 'Đào tạo & Dịch vụ' },
-  { id: 'DV10', name: 'Khóa Phong thái (8 buổi)', price: 6000000, category: 'Đào tạo & Dịch vụ' },
-  { id: 'DV11', name: 'Khóa Catwalk (12 buổi)', price: 8000000, category: 'Đào tạo & Dịch vụ' },
   { id: 'DV12', name: 'Chăm sóc da chuyên sâu', price: 850000, category: 'Chăm sóc da' },
   { id: 'DV13', name: 'Triệt lông nách / Vĩnh viễn', price: 1300000, category: 'Triệt lông vĩnh viễn' },
   { id: 'DV14', name: 'Laser Pico & Điều trị nám', price: 1500000, category: 'Laser & Điều trị' },
@@ -30,6 +27,12 @@ const DEFAULT_STAFF = [
   { id: 'NV06', name: 'Đặng Thảo Vy', initials: 'TV', color: 'bg-pink-600', role: 'Kỹ thuật viên' }
 ];
 
+const DEFAULT_BANK_ACCOUNTS = [
+  { id: 'acc1', name: 'Vietcombank Spa', bankName: 'Vietcombank (VCB)', accountNumber: '9988776655', accountHolder: 'NGUYEN THI HIEN', balance: 4500000 },
+  { id: 'acc2', name: 'Techcombank Spa', bankName: 'Techcombank (TCB)', accountNumber: '1903668899', accountHolder: 'NGUYEN THI HIEN', balance: 2800000 },
+  { id: 'acc3', name: 'Tiền mặt tại quầy', bankName: 'Tiền mặt', accountNumber: 'TIENMAT', accountHolder: 'Quầy Thu Ngân', balance: 1250000 }
+];
+
 export const AppProvider = ({ children }) => {
   // Default: null so user sees the login page first
   const [user, setUser] = useState(null);
@@ -41,6 +44,7 @@ export const AppProvider = ({ children }) => {
   const [expenses, setExpenses] = useState([]);
   const [services, setServices] = useState(DEFAULT_SERVICES);
   const [staff, setStaff] = useState(DEFAULT_STAFF);
+  const [bankAccounts, setBankAccounts] = useState(DEFAULT_BANK_ACCOUNTS);
   const [toasts, setToasts] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [selectedStaffCommission, setSelectedStaffCommission] = useState(null);
@@ -161,12 +165,13 @@ export const AppProvider = ({ children }) => {
   // Fetch all initial data
   const loadData = async () => {
     try {
-      const [custRes, invRes, expRes, srvRes, stfRes] = await Promise.all([
+      const [custRes, invRes, expRes, srvRes, stfRes, bnkRes] = await Promise.all([
         fetch('/api/customers').then(r => r.json()).catch(() => []),
         fetch('/api/invoices').then(r => r.json()).catch(() => []),
         fetch('/api/expenses').then(r => r.json()).catch(() => []),
         fetch('/api/services').then(r => r.json()).catch(() => DEFAULT_SERVICES),
-        fetch('/api/staff').then(r => r.json()).catch(() => DEFAULT_STAFF)
+        fetch('/api/staff').then(r => r.json()).catch(() => DEFAULT_STAFF),
+        fetch('/api/bank-accounts').then(r => r.json()).catch(() => DEFAULT_BANK_ACCOUNTS)
       ]);
 
       if (custRes && custRes.length > 0) setCustomers(custRes);
@@ -174,9 +179,69 @@ export const AppProvider = ({ children }) => {
       if (expRes && expRes.length > 0) setExpenses(expRes);
       if (srvRes && srvRes.length > 0) setServices(srvRes);
       if (stfRes && stfRes.length > 0) setStaff(stfRes);
+      if (bnkRes && bnkRes.length > 0) setBankAccounts(bnkRes);
     } catch (err) {
       console.log('Using default mock data:', err);
     }
+  };
+
+  // Add Staff Member
+  const addStaff = async (staffData) => {
+    try {
+      const res = await fetch('/api/staff', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(staffData)
+      });
+      const data = await res.json();
+      if (data.success && data.staff) {
+        setStaff(prev => [...prev, data.staff]);
+        addToast(`Đã thêm nhân viên: ${data.staff.name}`, 'success');
+        return data.staff;
+      }
+    } catch (e) {}
+
+    const initials = (staffData.name || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+    const newStf = {
+      id: 'NV' + String(staff.length + 1).padStart(2, '0'),
+      name: staffData.name,
+      role: staffData.role || 'Tư vấn & Kỹ thuật viên',
+      phone: staffData.phone || '',
+      initials,
+      color: 'bg-rose-600'
+    };
+    setStaff(prev => [...prev, newStf]);
+    addToast(`Đã thêm nhân viên mới: ${newStf.name}`, 'success');
+    return newStf;
+  };
+
+  // Add Bank Account
+  const addBankAccount = async (bankData) => {
+    try {
+      const res = await fetch('/api/bank-accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bankData)
+      });
+      const data = await res.json();
+      if (data.success && data.account) {
+        setBankAccounts(prev => [...prev, data.account]);
+        addToast(`Đã thêm thông tin ngân hàng: ${data.account.name}`, 'success');
+        return data.account;
+      }
+    } catch (e) {}
+
+    const newAcc = {
+      id: 'acc' + (bankAccounts.length + 1),
+      name: bankData.name || `${bankData.bankName} Spa`,
+      bankName: bankData.bankName,
+      accountNumber: bankData.accountNumber,
+      accountHolder: (bankData.accountHolder || 'HIEN XINH').toUpperCase(),
+      balance: 0
+    };
+    setBankAccounts(prev => [...prev, newAcc]);
+    addToast(`Đã thêm tài khoản: ${newAcc.name}`, 'success');
+    return newAcc;
   };
 
   useEffect(() => {
@@ -347,6 +412,9 @@ export const AppProvider = ({ children }) => {
         services,
         setServices,
         staff,
+        addStaff,
+        bankAccounts,
+        addBankAccount,
         addInvoice,
         deleteInvoice,
         addCustomer,
