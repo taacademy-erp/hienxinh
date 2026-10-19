@@ -39,7 +39,6 @@ export default function TabExpenses() {
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
-  const [activeMenuId, setActiveMenuId] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({

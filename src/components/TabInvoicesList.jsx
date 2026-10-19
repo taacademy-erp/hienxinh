@@ -63,7 +63,6 @@ export default function TabInvoicesList() {
   const [selectedRows, setSelectedRows] = useState([]);
   const [pageSize, setPageSize] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
-  const [activeMenuId, setActiveMenuId] = useState(null);
 
   // Extract available months and days from invoices
   const { availableMonths, availableDays } = useMemo(() => {

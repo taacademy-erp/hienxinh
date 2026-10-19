@@ -39,7 +39,6 @@ export default function TabCustomers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewHistoryCust, setViewHistoryCust] = useState(null);
-  const [activeMenuId, setActiveMenuId] = useState(null);
 
   // Form state
   const [formData, setFormData] = useState({
