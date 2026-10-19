@@ -80,10 +80,10 @@ export const AppProvider = ({ children }) => {
     if (!currentRole) return false;
     if (currentRole === 'chu') return true;
     if (currentRole === 'ql') {
-      return tabKey !== 'businessReport';
+      return !['businessReport', 'settings'].includes(tabKey);
     }
     if (currentRole === 'nhanvien') {
-      return !['invoicesList', 'businessReport'].includes(tabKey);
+      return !['invoicesList', 'businessReport', 'settings'].includes(tabKey);
     }
     return false;
   };

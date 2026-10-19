@@ -179,20 +179,22 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* TAB 7: Cài đặt */}
-          <div className="pt-2">
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 text-left ${
-                activeTab === 'settings'
-                  ? 'bg-white text-[#C0001A] font-bold shadow-md'
-                  : 'text-white/90 hover:bg-white/10 hover:text-white'
-              }`}
-            >
-              <Settings className={`w-4 h-4 ${activeTab === 'settings' ? 'text-[#C0001A]' : 'text-white/90'}`} />
-              <span>Cài đặt</span>
-            </button>
-          </div>
+          {/* TAB 7: Cài đặt - Chỉ Owner (chu) mới thấy */}
+          {hasPermission('settings') && (
+            <div className="pt-2">
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all duration-150 text-left ${
+                  activeTab === 'settings'
+                    ? 'bg-white text-[#C0001A] font-bold shadow-md'
+                    : 'text-white/90 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <Settings className={`w-4 h-4 ${activeTab === 'settings' ? 'text-[#C0001A]' : 'text-white/90'}`} />
+                <span>Cài đặt</span>
+              </button>
+            </div>
+          )}
         </nav>
       </div>
 

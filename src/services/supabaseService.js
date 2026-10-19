@@ -162,7 +162,14 @@ export const supabaseService = {
       if (error || !data) throw error;
       return normalizeCustomer(data);
     } catch (e) {
-      console.warn('Supabase addCustomer error:', e);
+      console.error('🔴 Supabase addCustomer FAILED:', {
+        message: e?.message,
+        code: e?.code,
+        details: e?.details,
+        hint: e?.hint,
+        status: e?.status,
+        full: e
+      });
       return null;
     }
   },
@@ -255,7 +262,14 @@ export const supabaseService = {
       if (error || !data) throw error;
       return normalizeInvoice(data);
     } catch (e) {
-      console.warn('Supabase addInvoice error:', e);
+      console.error('🔴 Supabase addInvoice FAILED:', {
+        message: e?.message,
+        code: e?.code,
+        details: e?.details,
+        hint: e?.hint,
+        status: e?.status,
+        full: e
+      });
       return null;
     }
   },
