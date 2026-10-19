@@ -229,37 +229,64 @@ export const supabaseService = {
   },
 
   async addInvoice(inv) {
-    try {
-      const payload = {
-        code: inv.code,
-        date: inv.date,
-        customer_id: inv.customerId || null,
-        customer_name: inv.customerName,
-        customer_phone: inv.customerPhone || '',
-        customer_dob: inv.customerDob || '',
-        staff_id: inv.staffId || null,
-        staff_name: inv.staffName || '',
-        services: inv.services || [],
-        service_summary: inv.serviceSummary || (inv.services || []).map(s => s.name).join(', '),
-        subtotal: Number(inv.subtotal ?? 0),
-        discount: Number(inv.discount ?? 0),
-        total_amount: Number(inv.totalAmount ?? 0),
-        paid_amount: Number(inv.paidAmount ?? inv.totalAmount ?? 0),
-        remaining_amount: Number(inv.remainingAmount ?? 0),
-        payment_method: inv.paymentMethod || 'Chuyển khoản',
-        bank_account: inv.bankAccount || '',
-        notes: inv.notes || '',
-        status: inv.status || 'Đã thanh toán',
-        created_by: inv.createdBy || ''
-      };
+    // Payload đầy đủ (yêu cầu bảng có đủ cột theo supabase-migration.sql)
+    const fullPayload = {
+      code:             inv.code,
+      date:             inv.date,
+      customer_id:      inv.customerId || null,
+      customer_name:    inv.customerName,
+      customer_phone:   inv.customerPhone || '',
+      customer_dob:     inv.customerDob || '',
+      staff_id:         inv.staffId || null,
+      staff_name:       inv.staffName || '',
+      services:         inv.services || [],
+      service_summary:  inv.serviceSummary || (inv.services || []).map(s => s.name).join(', '),
+      subtotal:         Number(inv.subtotal ?? 0),
+      discount:         Number(inv.discount ?? 0),
+      total_amount:     Number(inv.totalAmount ?? 0),
+      paid_amount:      Number(inv.paidAmount ?? inv.totalAmount ?? 0),
+      remaining_amount: Number(inv.remainingAmount ?? 0),
+      payment_method:   inv.paymentMethod || 'Chuyển khoản',
+      bank_account:     inv.bankAccount || '',
+      notes:            inv.notes || '',
+      status:           inv.status || 'Đã thanh toán',
+      created_by:       inv.createdBy || ''
+    };
 
+    // Payload tối thiểu (phòng trường hợp bảng chưa được migration đầy đủ)
+    const minimalPayload = {
+      code:          inv.code,
+      date:          inv.date,
+      customer_name: inv.customerName,
+      total_amount:  Number(inv.totalAmount ?? 0),
+    };
+
+    try {
+      // Lần 1: thử payload đầy đủ
       const { data, error } = await supabase
         .from('invoices')
-        .insert([payload])
+        .insert([fullPayload])
         .select()
         .single();
 
-      if (error || !data) throw error;
+      if (error) {
+        // Nếu lỗi PGRST204 (column not found) → nhắc user chạy migration
+        if (error.code === 'PGRST204' || (error.message || '').includes('column')) {
+          console.error('🔴 Supabase invoices: Thiếu cột trong bảng!', error.message);
+          console.error('👉 Vui lòng chạy file supabase-migration.sql trong Supabase Dashboard → SQL Editor');
+
+          // Lần 2: thử payload tối thiểu
+          const { data: d2, error: e2 } = await supabase
+            .from('invoices')
+            .insert([minimalPayload])
+            .select()
+            .single();
+          if (e2) throw e2;
+          return normalizeInvoice(d2);
+        }
+        throw error;
+      }
+
       return normalizeInvoice(data);
     } catch (e) {
       console.error('🔴 Supabase addInvoice FAILED:', {
@@ -273,6 +300,7 @@ export const supabaseService = {
       return null;
     }
   },
+
 
   async deleteInvoice(id) {
     try {
