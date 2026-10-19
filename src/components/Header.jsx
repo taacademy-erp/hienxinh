@@ -5,7 +5,6 @@ import { Search, Bell, ChevronDown, User, Shield, LogOut } from 'lucide-react';
 export default function Header() {
   const {
     user,
-    switchRole,
     logout,
     globalSearchQuery,
     setGlobalSearchQuery,
@@ -132,36 +131,7 @@ export default function Header() {
                 </span>
               </div>
 
-              {/* Quick Role Switcher */}
-              <div className="px-4 py-2 border-b border-gray-100">
-                <p className="text-[11px] font-semibold text-gray-400 mb-1.5 uppercase">Chuyển vai trò test:</p>
-                <div className="grid grid-cols-3 gap-1">
-                  <button
-                    onClick={() => { switchRole('chu'); setIsDropdownOpen(false); }}
-                    className={`py-1 text-xs font-semibold rounded-lg border ${
-                      user?.role === 'chu' ? 'bg-[#C0001A] text-white border-[#C0001A]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Chủ
-                  </button>
-                  <button
-                    onClick={() => { switchRole('ql'); setIsDropdownOpen(false); }}
-                    className={`py-1 text-xs font-semibold rounded-lg border ${
-                      user?.role === 'ql' ? 'bg-[#C0001A] text-white border-[#C0001A]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Quản lý
-                  </button>
-                  <button
-                    onClick={() => { switchRole('nhanvien'); setIsDropdownOpen(false); }}
-                    className={`py-1 text-xs font-semibold rounded-lg border ${
-                      user?.role === 'nhanvien' ? 'bg-[#C0001A] text-white border-[#C0001A]' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    Nhân viên
-                  </button>
-                </div>
-              </div>
+
 
               <div className="pt-1">
                 <button
