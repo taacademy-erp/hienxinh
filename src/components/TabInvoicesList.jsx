@@ -29,7 +29,8 @@ export default function TabInvoicesList() {
     formatVND,
     hasPermission,
     setSelectedInvoice,
-    loadData
+    loadData,
+    user
   } = useApp();
 
   // If role is Nhân viên, show forbidden message
@@ -487,6 +488,7 @@ export default function TabInvoicesList() {
                                 <Printer className="w-3.5 h-3.5 text-blue-500" />
                                 <span>In hóa đơn</span>
                               </button>
+                              {user?.role === 'chu' && (
                               <button
                                 onClick={() => {
                                   if (confirm(`Bạn chắc chắn muốn xóa hóa đơn "${inv.code}"?`)) {
@@ -499,6 +501,7 @@ export default function TabInvoicesList() {
                                 <Trash2 className="w-3.5 h-3.5 text-red-500" />
                                 <span>Xóa hóa đơn</span>
                               </button>
+                              )}
                             </div>
                           )}
                         </div>

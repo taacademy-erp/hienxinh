@@ -23,7 +23,8 @@ export default function TabExpenses() {
     addExpense,
     deleteExpense,
     loadData,
-    formatVND
+    formatVND,
+    user
   } = useApp();
 
   // Filters state
@@ -497,6 +498,7 @@ export default function TabExpenses() {
 
                             {activeMenuId === exp.id && (
                               <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
+                                {user?.role !== 'nhanvien' && (
                                 <button
                                   type="button"
                                   onClick={() => handleOpenEdit(exp)}
@@ -505,6 +507,8 @@ export default function TabExpenses() {
                                   <Edit2 className="w-3.5 h-3.5 text-blue-500" />
                                   <span>Chỉnh sửa</span>
                                 </button>
+                                )}
+                                {user?.role === 'chu' && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -516,6 +520,7 @@ export default function TabExpenses() {
                                   <Trash2 className="w-3.5 h-3.5 text-red-500" />
                                   <span>Xóa chi phí</span>
                                 </button>
+                                )}
                               </div>
                             )}
                           </div>

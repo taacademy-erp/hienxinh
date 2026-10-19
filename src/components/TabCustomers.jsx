@@ -23,7 +23,8 @@ export default function TabCustomers() {
     invoices,
     formatVND,
     globalSearchQuery,
-    setGlobalSearchQuery
+    setGlobalSearchQuery,
+    user
   } = useApp();
 
   // Filters state
@@ -353,6 +354,7 @@ export default function TabCustomers() {
                                 <Eye className="w-3.5 h-3.5 text-gray-400" />
                                 <span>Xem lịch sử hóa đơn</span>
                               </button>
+                              {user?.role !== 'nhanvien' && (
                               <button
                                 onClick={() => handleOpenEdit(cust)}
                                 className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
@@ -360,6 +362,8 @@ export default function TabCustomers() {
                                 <Edit2 className="w-3.5 h-3.5 text-blue-500" />
                                 <span>Chỉnh sửa thông tin</span>
                               </button>
+                              )}
+                              {user?.role === 'chu' && (
                               <button
                                 onClick={() => {
                                   if (confirm(`Bạn chắc chắn muốn xóa khách hàng "${cust.name}"?`)) {
@@ -372,6 +376,7 @@ export default function TabCustomers() {
                                 <Trash2 className="w-3.5 h-3.5 text-red-500" />
                                 <span>Xóa khách hàng</span>
                               </button>
+                              )}
                             </div>
                           )}
                         </div>
