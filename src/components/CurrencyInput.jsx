@@ -1,13 +1,10 @@
-import React, { useRef } from 'react';
-import { formatCurrencyInput } from '../utils/currencyUtils';
+import React, { useRef, useState, useEffect } from 'react';
 
 /**
  * Reusable Currency Input for Vietnamese Dong (VNĐ)
- * - Tự động phân chia cứ 3 số là 1 dấu chấm từ phải qua trái: 100.000, 1.500.000
- * - Tự động bôi đen toàn bộ số khi click/focus vào (select all) để nhập đè thay thế nhanh
- * - Xử lý thông minh khi nhấn Backspace qua dấu chấm
- * - Giữ con trỏ chuột mượt mà ở vị trí gõ không bị nhảy
- * - Cho phép nhập số thuần túy (VD: 100000) hoặc nhập kèm dấu chấm (VD: 100.000)
+ * - Xóa sạch các ký tự không phải là số: value.replace(/\D/g, '')
+ * - Tự động thêm dấu chấm chuẩn Việt Nam: new Intl.NumberFormat('vi-VN').format()
+ * - Đảm bảo số 0 giữ nguyên là số 0 không bị nhảy số
  */
 export default function CurrencyInput({
   value,
@@ -16,82 +13,95 @@ export default function CurrencyInput({
   className = '',
   required = false,
   readOnly = false,
-  showZero = false,
   ...props
 }) {
   const inputRef = useRef(null);
 
-  // Formatted display value: if 0 and !showZero, display empty string so placeholder is visible
-  const numValue = typeof value === 'number' ? value : (parseInt(String(value || '').replace(/\D/g, ''), 10) || 0);
-  const displayValue = numValue > 0 || showZero ? formatCurrencyInput(numValue) : '';
+  // Hàm format chuẩn Việt Nam bằng Intl.NumberFormat('vi-VN')
+  const formatNumber = (val) => {
+    if (val === null || val === undefined || val === '') return '';
+    const clean = String(val).replace(/\D/g, '');
+    if (clean === '') return '';
+    return new Intl.NumberFormat('vi-VN').format(Number(clean));
+  };
+
+  // State cục bộ giúp hiển thị mượt mà khi gõ từng ký tự
+  const [displayValue, setDisplayValue] = useState(() => {
+    if (value === 0 || value === '0') return '0';
+    return formatNumber(value);
+  });
+
+  // Đồng bộ khi value từ component cha thay đổi từ bên ngoài
+  useEffect(() => {
+    const currentNum = Number(String(displayValue).replace(/\D/g, '')) || 0;
+    const incomingNum = Number(value) || 0;
+    if (incomingNum !== currentNum || (displayValue === '' && value !== '' && value !== null && value !== undefined)) {
+      if (value === 0 || value === '0') {
+        setDisplayValue('0');
+      } else {
+        setDisplayValue(formatNumber(value));
+      }
+    }
+  }, [value]);
 
   const handleChange = (e) => {
-    const input = e.target;
-    const raw = input.value;
-    const oldCursor = input.selectionStart || 0;
-    const distanceFromRight = raw.length - oldCursor;
+    const rawValue = e.target.value;
 
-    // Sanitize to only numeric digits
-    const digits = raw.replace(/\D/g, '');
-    const num = digits ? parseInt(digits, 10) : 0;
+    // 1. Bắt buộc dùng value.replace(/\D/g, '') để xóa sạch các ký tự không phải là số trước
+    const cleanValue = rawValue.replace(/\D/g, '');
 
+    // Đo khoảng cách con trỏ từ mép phải để giữ vị trí khi tự động chèn dấu chấm
+    const oldCursor = e.target.selectionStart || 0;
+    const distanceFromRight = rawValue.length - oldCursor;
+
+    // Nếu người dùng xóa sạch ô nhập
+    if (cleanValue === '') {
+      setDisplayValue('');
+      if (onChange) {
+        onChange(0);
+      }
+      return;
+    }
+
+    // 2. Dùng new Intl.NumberFormat('vi-VN').format() để tự động thêm dấu chấm chuẩn Việt Nam
+    const num = Number(cleanValue);
+    const formatted = new Intl.NumberFormat('vi-VN').format(num);
+
+    // Cập nhật giá trị hiển thị giữ nguyên số 0 không bị nhảy số
+    setDisplayValue(formatted);
+
+    // Gọi onChange truyền giá trị số cho component cha
     if (onChange) {
       onChange(num);
     }
 
-    // Preserve cursor position relative to the right side
+    // Giữ vị trí con trỏ chuột chính xác không bị nhảy
     requestAnimationFrame(() => {
       if (inputRef.current) {
-        const newLen = inputRef.current.value.length;
+        const newLen = formatted.length;
         const newCursor = Math.max(0, newLen - distanceFromRight);
         inputRef.current.setSelectionRange(newCursor, newCursor);
       }
     });
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Backspace') {
-      const input = e.target;
-      const { selectionStart, selectionEnd, value: currentVal } = input;
-      // If single cursor position (no range selected) and not at index 0
-      if (selectionStart === selectionEnd && selectionStart > 0) {
-        // If the character right before cursor is a dot '.', delete the digit before the dot
-        if (currentVal[selectionStart - 1] === '.') {
-          e.preventDefault();
-          const before = currentVal.slice(0, selectionStart - 2);
-          const after = currentVal.slice(selectionStart);
-          const raw = before + after;
-          const digits = raw.replace(/\D/g, '');
-          const num = digits ? parseInt(digits, 10) : 0;
-          if (onChange) onChange(num);
-
-          requestAnimationFrame(() => {
-            if (inputRef.current) {
-              const newLen = inputRef.current.value.length;
-              const distFromRight = currentVal.length - selectionStart;
-              const newPos = Math.max(0, newLen - distFromRight);
-              inputRef.current.setSelectionRange(newPos, newPos);
-            }
-          });
-        }
-      }
-    }
-    if (props.onKeyDown) {
-      props.onKeyDown(e);
+  const handleFocus = (e) => {
+    e.target.select();
+    if (props.onFocus) {
+      props.onFocus(e);
     }
   };
 
-  const handleFocus = (e) => {
-    // Automatically select all content on focus so typing replaces immediately
-    const target = e.target;
-    if (target) {
-      target.select();
-      setTimeout(() => {
-        if (target) target.select();
-      }, 30);
+  const handleBlur = (e) => {
+    // Khi rời khỏi ô, nếu ô trống thì hiển thị '0'
+    if (displayValue === '') {
+      setDisplayValue('0');
+      if (onChange) {
+        onChange(0);
+      }
     }
-    if (props.onFocus) {
-      props.onFocus(e);
+    if (props.onBlur) {
+      props.onBlur(e);
     }
   };
 
@@ -102,8 +112,8 @@ export default function CurrencyInput({
       inputMode="numeric"
       value={displayValue}
       onChange={handleChange}
-      onKeyDown={handleKeyDown}
       onFocus={handleFocus}
+      onBlur={handleBlur}
       placeholder={placeholder}
       required={required}
       readOnly={readOnly}
