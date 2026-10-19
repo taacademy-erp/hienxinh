@@ -15,6 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
+import CurrencyInput from './CurrencyInput';
 
 export default function TabCreateInvoice() {
   const {
@@ -428,20 +429,19 @@ export default function TabCreateInvoice() {
 
                     {/* Listed Price */}
                     <td className="py-3 px-3">
-                      <input
-                        type="text"
-                        value={formatCurrencyInput(row.listedPrice)}
-                        onChange={(e) => handleRowChange(row.id, 'listedPrice', parseCurrencyInput(e.target.value))}
+                      <CurrencyInput
+                        value={row.listedPrice}
+                        onChange={(val) => handleRowChange(row.id, 'listedPrice', val)}
+                        showZero={true}
                         className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                       />
                     </td>
 
                     {/* Discount Price */}
                     <td className="py-3 px-3">
-                      <input
-                        type="text"
-                        value={row.discountPrice ? formatCurrencyInput(row.discountPrice) : ''}
-                        onChange={(e) => handleRowChange(row.id, 'discountPrice', parseCurrencyInput(e.target.value))}
+                      <CurrencyInput
+                        value={row.discountPrice}
+                        onChange={(val) => handleRowChange(row.id, 'discountPrice', val)}
                         placeholder="0"
                         className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-bold text-gray-900 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                       />
@@ -639,14 +639,14 @@ export default function TabCreateInvoice() {
               Đã thanh toán (VNĐ) <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <input
-                type="text"
+              <CurrencyInput
                 required
-                value={formatCurrencyInput(paidAmount)}
-                onChange={(e) => {
+                value={paidAmount}
+                onChange={(val) => {
                   setIsPaidCustom(true);
-                  setPaidAmount(parseCurrencyInput(e.target.value));
+                  setPaidAmount(val);
                 }}
+                showZero={true}
                 placeholder="0"
                 className="w-full px-3.5 py-2.5 bg-white border border-emerald-300 rounded-xl text-base font-bold text-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-sans"
               />
