@@ -76,13 +76,22 @@ export const AppProvider = ({ children }) => {
   };
 
   // Role permissions checker
+  // Normalize role from Supabase or any source to internal keys
+  const normalizeRole = (r) => {
+    if (!r) return 'nhanvien';
+    const low = r.toLowerCase().trim();
+    if (['chu', 'chủ', 'owner', 'admin'].includes(low)) return 'chu';
+    if (['ql', 'quanly', 'quản lý', 'manager'].includes(low)) return 'ql';
+    return 'nhanvien';
+  };
+
   const hasPermission = (tabKey, currentRole = user?.role) => {
-    if (!currentRole) return false;
-    if (currentRole === 'chu') return true;
-    if (currentRole === 'ql') {
+    const role = normalizeRole(currentRole);
+    if (role === 'chu') return true;
+    if (role === 'ql') {
       return !['businessReport', 'settings'].includes(tabKey);
     }
-    if (currentRole === 'nhanvien') {
+    if (role === 'nhanvien') {
       return !['invoicesList', 'businessReport', 'settings'].includes(tabKey);
     }
     return false;
@@ -575,6 +584,7 @@ export const AppProvider = ({ children }) => {
         activeTab,
         setActiveTab: navigateToTab,
         hasPermission,
+        normalizeRole,
         isReportDropdownOpen,
         setIsReportDropdownOpen,
         customers,

@@ -5,7 +5,6 @@ import {
   Plus,
   Download,
   SlidersHorizontal,
-  MoreHorizontal,
   Edit2,
   Trash2,
   Eye,
@@ -24,7 +23,8 @@ export default function TabCustomers() {
     formatVND,
     globalSearchQuery,
     setGlobalSearchQuery,
-    user
+    user,
+    normalizeRole
   } = useApp();
 
   // Filters state
@@ -333,51 +333,39 @@ export default function TabCustomers() {
                       <td className="py-3.5 px-4 font-sans text-gray-700">{cust.phone}</td>
                       <td className="py-3.5 px-4">{renderGroupBadge(cust.group)}</td>
                       <td className="py-3.5 px-4 text-gray-700 font-medium">{cust.source || 'Facebook'}</td>
-                      <td className="py-3.5 pr-6 pl-4 text-center relative">
-                        <div className="relative inline-block text-left">
+                      <td className="py-3.5 pr-6 pl-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Xem lịch sử - tất cả vai trò */}
                           <button
-                            onClick={() => setActiveMenuId(activeMenuId === cust.id ? null : cust.id)}
-                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            onClick={() => { setViewHistoryCust(cust); }}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Xem lịch sử hóa đơn"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
-
-                          {activeMenuId === cust.id && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
-                              <button
-                                onClick={() => {
-                                  setViewHistoryCust(cust);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-gray-400" />
-                                <span>Xem lịch sử hóa đơn</span>
-                              </button>
-                              {user?.role !== 'nhanvien' && (
-                              <button
-                                onClick={() => handleOpenEdit(cust)}
-                                className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                                <span>Chỉnh sửa thông tin</span>
-                              </button>
-                              )}
-                              {user?.role === 'chu' && (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Bạn chắc chắn muốn xóa khách hàng "${cust.name}"?`)) {
-                                    deleteCustomer(cust.id);
-                                    setActiveMenuId(null);
-                                  }
-                                }}
-                                className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                <span>Xóa khách hàng</span>
-                              </button>
-                              )}
-                            </div>
+                          {/* Chỉnh sửa - Chủ & Quản lý */}
+                          {normalizeRole(user?.role) !== 'nhanvien' && (
+                          <button
+                            onClick={() => handleOpenEdit(cust)}
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Chỉnh sửa thông tin"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          )}
+                          {/* Xóa - chỉ Chủ */}
+                          {normalizeRole(user?.role) === 'chu' && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Bạn chắc chắn muốn xóa khách hàng "${cust.name}"?`)) {
+                                deleteCustomer(cust.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Xóa khách hàng"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                           )}
                         </div>
                       </td>

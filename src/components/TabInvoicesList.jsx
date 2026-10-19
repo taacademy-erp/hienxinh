@@ -5,7 +5,6 @@ import {
   Calendar,
   RotateCw,
   Plus,
-  MoreHorizontal,
   Eye,
   Printer,
   Trash2,
@@ -30,7 +29,8 @@ export default function TabInvoicesList() {
     hasPermission,
     setSelectedInvoice,
     loadData,
-    user
+    user,
+    normalizeRole
   } = useApp();
 
   // If role is Nhân viên, show forbidden message
@@ -456,53 +456,40 @@ export default function TabInvoicesList() {
                           );
                         })()}
                       </td>
-                      <td className="py-3.5 pr-6 pl-4 text-center relative">
-                        <div className="relative inline-block text-left">
+                      <td className="py-3.5 pr-6 pl-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {/* Xem chi tiết */}
                           <button
-                            onClick={() => setActiveMenuId(activeMenuId === inv.id ? null : inv.id)}
-                            className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            onClick={() => setSelectedInvoice(inv)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Xem chi tiết"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <Eye className="w-4 h-4" />
                           </button>
-
-                          {activeMenuId === inv.id && (
-                            <div className="absolute right-0 mt-1 w-44 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
-                              <button
-                                onClick={() => {
-                                  setSelectedInvoice(inv);
-                                  setActiveMenuId(null);
-                                }}
-                                className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Eye className="w-3.5 h-3.5 text-gray-400" />
-                                <span>Xem chi tiết</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setSelectedInvoice(inv);
-                                  setActiveMenuId(null);
-                                  setTimeout(() => window.print(), 300);
-                                }}
-                                className="w-full px-3 py-2 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                              >
-                                <Printer className="w-3.5 h-3.5 text-blue-500" />
-                                <span>In hóa đơn</span>
-                              </button>
-                              {user?.role === 'chu' && (
-                              <button
-                                onClick={() => {
-                                  if (confirm(`Bạn chắc chắn muốn xóa hóa đơn "${inv.code}"?`)) {
-                                    deleteInvoice(inv.id);
-                                    setActiveMenuId(null);
-                                  }
-                                }}
-                                className="w-full px-3 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                <span>Xóa hóa đơn</span>
-                              </button>
-                              )}
-                            </div>
+                          {/* In hóa đơn */}
+                          <button
+                            onClick={() => {
+                              setSelectedInvoice(inv);
+                              setTimeout(() => window.print(), 300);
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                            title="In hóa đơn"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          {/* Xóa - chỉ Chủ */}
+                          {normalizeRole(user?.role) === 'chu' && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Bạn chắc chắn muốn xóa hóa đơn "${inv.code}"?`)) {
+                                deleteInvoice(inv.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Xóa hóa đơn"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                           )}
                         </div>
                       </td>

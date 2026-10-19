@@ -4,7 +4,6 @@ import {
   Calendar,
   RotateCw,
   Plus,
-  MoreHorizontal,
   Edit2,
   Trash2,
   X,
@@ -24,7 +23,8 @@ export default function TabExpenses() {
     deleteExpense,
     loadData,
     formatVND,
-    user
+    user,
+    normalizeRole
   } = useApp();
 
   // Filters state
@@ -486,42 +486,33 @@ export default function TabExpenses() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-gray-600 text-xs font-sans">{exp.note}</td>
-                        <td className="py-3.5 pr-6 pl-4 text-center relative">
-                          <div className="relative inline-block text-left">
+                        <td className="py-3.5 pr-6 pl-4 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* Chỉnh sửa - Chủ & Quản lý */}
+                            {normalizeRole(user?.role) !== 'nhanvien' && (
                             <button
                               type="button"
-                              onClick={() => setActiveMenuId(activeMenuId === exp.id ? null : exp.id)}
-                              className="p-1 text-gray-500 hover:text-gray-800 rounded transition-colors"
+                              onClick={() => handleOpenEdit(exp)}
+                              className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              title="Chỉnh sửa"
                             >
-                              <MoreHorizontal className="w-4 h-4" />
+                              <Edit2 className="w-4 h-4" />
                             </button>
-
-                            {activeMenuId === exp.id && (
-                              <div className="absolute right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-20 text-left text-xs">
-                                {user?.role !== 'nhanvien' && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleOpenEdit(exp)}
-                                  className="w-full px-3 py-1.5 text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                                >
-                                  <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                                  <span>Chỉnh sửa</span>
-                                </button>
-                                )}
-                                {user?.role === 'chu' && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    deleteExpense(exp.id);
-                                    setActiveMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-1.5 text-red-600 hover:bg-red-50 flex items-center gap-2"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                                  <span>Xóa chi phí</span>
-                                </button>
-                                )}
-                              </div>
+                            )}
+                            {/* Xóa - chỉ Chủ */}
+                            {normalizeRole(user?.role) === 'chu' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Bạn chắc chắn muốn xóa chi phí "${exp.content}"?`)) {
+                                  deleteExpense(exp.id);
+                                }
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Xóa chi phí"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                             )}
                           </div>
                         </td>
