@@ -33,6 +33,9 @@ export default function TabInvoicesList() {
     normalizeRole
   } = useApp();
 
+  // Chỉ Chủ mới xem được cột tài chính (Tổng tiền, Đã TT, Còn lại)
+  const showFinance = normalizeRole(user?.role) === 'chu';
+
   // If role is Nhân viên, show forbidden message
   if (!hasPermission('invoicesList')) {
     return (
@@ -186,8 +189,8 @@ export default function TabInvoicesList() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-        {/* 3 ô tổng hợp trên thanh lọc: 1 ô tổng hợp là Số Hóa Đơn trong ngày, số khách hàng còn nợ và số tiền cần thu */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-gray-100">
+        {/* 3 ô tổng hợp - chỉ Chủ mới thấy ô Khách nợ và Số tiền cần thu */}
+        <div className={`grid grid-cols-1 ${showFinance ? 'sm:grid-cols-3' : 'sm:grid-cols-1'} gap-3 pb-3 border-b border-gray-100`}>
           <div className="flex items-center gap-3.5 p-3.5 bg-rose-50/50 rounded-xl border border-rose-100">
             <div className="w-10 h-10 rounded-xl bg-[#E60026] text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
               <FileText className="w-5 h-5" />
@@ -202,6 +205,7 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
+          {showFinance && (
           <div className="flex items-center gap-3.5 p-3.5 bg-amber-50/50 rounded-xl border border-amber-100">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
               <Users className="w-5 h-5" />
@@ -215,7 +219,9 @@ export default function TabInvoicesList() {
               </div>
             </div>
           </div>
+          )}
 
+          {showFinance && (
           <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 rounded-xl border border-red-100">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
               <Coins className="w-5 h-5" />
@@ -229,6 +235,7 @@ export default function TabInvoicesList() {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Filter Controls */}
@@ -385,16 +392,16 @@ export default function TabInvoicesList() {
                 <th className="py-3.5 px-4 font-bold text-gray-800">Họ và tên khách hàng</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Số điện thoại</th>
                 <th className="py-3.5 px-4 font-bold text-gray-800">Dịch vụ</th>
-                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Tổng tiền</th>
-                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Đã thanh toán</th>
-                <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Còn lại</th>
+                {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Tổng tiền</th>}
+                {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Đã thanh toán</th>}
+                {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Còn lại</th>}
                 <th className="py-3.5 pr-6 pl-4 text-center font-bold text-gray-800 w-24">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan="11" className="py-12 text-center text-gray-400">
+                  <td colSpan={showFinance ? 11 : 8} className="py-12 text-center text-gray-400">
                     Không tìm thấy hóa đơn nào phù hợp.
                   </td>
                 </tr>
@@ -428,21 +435,26 @@ export default function TabInvoicesList() {
                       <td className="py-3.5 px-4 font-semibold text-gray-900">{inv.customerName}</td>
                       <td className="py-3.5 px-4 font-sans text-gray-700">{inv.customerPhone}</td>
                       <td className="py-3.5 px-4 text-gray-700 max-w-[200px] truncate" title={inv.serviceSummary}>{inv.serviceSummary}</td>
-                      {/* Tổng tiền */}
+                      {/* Tổng tiền - chỉ Chủ */}
+                      {showFinance && (
                       <td className="py-3.5 px-4 text-right">
                         <span className="font-extrabold text-[#E60026] font-sans">
                           {formatCurrencyInput(Number(inv.totalAmount) || 0)}đ
                         </span>
                       </td>
+                      )}
 
-                      {/* Đã thanh toán */}
+                      {/* Đã thanh toán - chỉ Chủ */}
+                      {showFinance && (
                       <td className="py-3.5 px-4 text-right">
                         <span className="font-semibold text-emerald-600 font-sans">
                           {formatCurrencyInput(inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : (Number(inv.totalAmount) || 0))}đ
                         </span>
                       </td>
+                      )}
 
-                      {/* Còn lại */}
+                      {/* Còn lại - chỉ Chủ */}
+                      {showFinance && (
                       <td className="py-3.5 px-4 text-right">
                         {(() => {
                           const tot = Number(inv.totalAmount) || 0;
@@ -455,6 +467,7 @@ export default function TabInvoicesList() {
                           );
                         })()}
                       </td>
+                      )}
                       <td className="py-3.5 pr-6 pl-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {/* Xem chi tiết */}
