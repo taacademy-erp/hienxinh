@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from './context/AppContext';
 import LoginView from './components/LoginView';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import BottomNav from './components/BottomNav';
 import TabHome from './components/TabHome';
 import TabCustomers from './components/TabCustomers';
 import TabCreateInvoice from './components/TabCreateInvoice';
@@ -16,8 +17,8 @@ import Toast from './components/Toast';
 
 export default function App() {
   const { user, activeTab } = useApp();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // If not logged in, render the login page
   if (!user) {
     return (
       <>
@@ -29,24 +30,28 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex bg-[#FAF6F7] text-slate-800 antialiased font-sans">
-      {/* Sidebar Navigation */}
-      <Sidebar />
+      {/* Sidebar - hidden on mobile, drawer on tablet, fixed on desktop */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto h-screen">
-        <Header />
+        <Header onMenuToggle={() => setSidebarOpen(true)} />
 
-        <main className="flex-1 p-6 sm:p-8 max-w-7xl w-full mx-auto">
-          {activeTab === 'home' && <TabHome />}
-          {activeTab === 'customers' && <TabCustomers />}
-          {activeTab === 'createInvoice' && <TabCreateInvoice />}
-          {activeTab === 'invoicesList' && <TabInvoicesList />}
-          {activeTab === 'expenses' && <TabExpenses />}
+        {/* Extra bottom padding on mobile so content not hidden under BottomNav */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
+          {activeTab === 'home'             && <TabHome />}
+          {activeTab === 'customers'        && <TabCustomers />}
+          {activeTab === 'createInvoice'    && <TabCreateInvoice />}
+          {activeTab === 'invoicesList'     && <TabInvoicesList />}
+          {activeTab === 'expenses'         && <TabExpenses />}
           {activeTab === 'commissionReport' && <TabCommissionReport />}
-          {activeTab === 'businessReport' && <TabBusinessReport />}
-          {activeTab === 'settings' && <TabSettings />}
+          {activeTab === 'businessReport'   && <TabBusinessReport />}
+          {activeTab === 'settings'         && <TabSettings />}
         </main>
       </div>
+
+      {/* Bottom Navigation Bar - mobile only */}
+      <BottomNav />
 
       {/* Global Modals & Notifications */}
       <InvoiceDetailModal />

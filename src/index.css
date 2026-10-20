@@ -63,3 +63,16 @@
 .transition-smooth {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Safe area padding for iOS notch / home indicator */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Mobile: prevent horizontal scroll on table */
+@media (max-width: 1023px) {
+  table {
+    min-width: 600px;
+  }
+}
+
