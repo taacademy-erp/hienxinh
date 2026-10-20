@@ -189,8 +189,8 @@ export default function TabInvoicesList() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-        {/* 3 ô tổng hợp - chỉ Chủ mới thấy ô Khách nợ và Số tiền cần thu */}
-        <div className={`grid grid-cols-1 ${showFinance ? 'sm:grid-cols-3' : 'sm:grid-cols-1'} gap-3 pb-3 border-b border-gray-100`}>
+        {/* 3 ô tổng hợp - Chủ & Quản lý đều thấy */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-gray-100">
           <div className="flex items-center gap-3.5 p-3.5 bg-rose-50/50 rounded-xl border border-rose-100">
             <div className="w-10 h-10 rounded-xl bg-[#E60026] text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
               <FileText className="w-5 h-5" />
@@ -205,7 +205,6 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
-          {showFinance && (
           <div className="flex items-center gap-3.5 p-3.5 bg-amber-50/50 rounded-xl border border-amber-100">
             <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
               <Users className="w-5 h-5" />
@@ -219,9 +218,7 @@ export default function TabInvoicesList() {
               </div>
             </div>
           </div>
-          )}
 
-          {showFinance && (
           <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 rounded-xl border border-red-100">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
               <Coins className="w-5 h-5" />
@@ -235,7 +232,6 @@ export default function TabInvoicesList() {
               </div>
             </div>
           </div>
-          )}
         </div>
 
         {/* Filter Controls */}
