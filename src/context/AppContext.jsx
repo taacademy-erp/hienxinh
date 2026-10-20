@@ -458,6 +458,9 @@ export const AppProvider = ({ children }) => {
     addToast('Đã xóa hóa đơn thành công!', 'info');
   };
 
+  // Invoice editing state - for pre-filling TabCreateInvoice
+  const [editingInvoice, setEditingInvoice] = useState(null);
+
   // Add / Edit / Delete Customer (Supabase + Local)
   const addCustomer = async (custData) => {
     // 1. Supabase
@@ -598,6 +601,8 @@ export const AppProvider = ({ children }) => {
         addBankAccount,
         addInvoice,
         deleteInvoice,
+        editingInvoice,
+        setEditingInvoice,
         addCustomer,
         updateCustomer,
         deleteCustomer,

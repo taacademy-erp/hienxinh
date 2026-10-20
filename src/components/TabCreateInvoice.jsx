@@ -28,7 +28,9 @@ export default function TabCreateInvoice() {
     addInvoice,
     formatVND,
     formatNumber,
-    addToast
+    addToast,
+    editingInvoice,
+    setEditingInvoice
   } = useApp();
 
   // Customer fields
@@ -76,6 +78,40 @@ export default function TabCreateInvoice() {
       setPaidAmount(computedTotal);
     }
   }, [computedTotal, isPaidCustom]);
+
+  // Pre-fill form when editing an existing invoice
+  useEffect(() => {
+    if (editingInvoice) {
+      setCustomerName(editingInvoice.customerName || '');
+      setCustomerPhone(editingInvoice.customerPhone || '');
+      setCustomerDob(editingInvoice.customerDob || '');
+      setPaymentMethod(editingInvoice.paymentMethod || 'Chuyển khoản');
+      setBankAccount(editingInvoice.bankAccount || 'Vietcombank Spa');
+      setNote(editingInvoice.note || '');
+      const paid = editingInvoice.paidAmount !== undefined ? Number(editingInvoice.paidAmount) : Number(editingInvoice.totalAmount) || 0;
+      setPaidAmount(paid);
+      setIsPaidCustom(true);
+      // Parse service rows if serviceSummary exists
+      if (editingInvoice.serviceSummary) {
+        setServiceRows([{
+          id: 1,
+          serviceName: editingInvoice.serviceSummary,
+          listedPrice: Number(editingInvoice.totalAmount) || 0,
+          discountPrice: 0,
+          total: Number(editingInvoice.totalAmount) || 0,
+          onlineStaff: '',
+          onlineCommissionRate: 5,
+          directStaff: '',
+          directCommissionRate: 10,
+          execStaff: '',
+          execCommissionRate: 15
+        }]);
+      }
+      addToast(`Đang chỉnh sửa hóa đơn ${editingInvoice.code}`, 'info');
+      // Clear after pre-fill so navigating away resets
+      setEditingInvoice(null);
+    }
+  }, [editingInvoice]);
 
   // Handle customer suggestion lookup when typing phone or name
   const handlePhoneChange = (val) => {

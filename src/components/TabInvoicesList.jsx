@@ -6,6 +6,7 @@ import {
   RotateCw,
   Plus,
   Eye,
+  Edit2,
   Printer,
   Trash2,
   ChevronLeft,
@@ -30,7 +31,9 @@ export default function TabInvoicesList() {
     setSelectedInvoice,
     loadData,
     user,
-    normalizeRole
+    normalizeRole,
+    editingInvoice,
+    setEditingInvoice
   } = useApp();
 
   // Chỉ Chủ mới xem được cột tài chính (Tổng tiền, Đã TT, Còn lại)
@@ -474,6 +477,19 @@ export default function TabInvoicesList() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+                          {/* Chỉnh sửa - Chủ & Quản lý */}
+                          {normalizeRole(user?.role) !== 'nhanvien' && (
+                          <button
+                            onClick={() => {
+                              setEditingInvoice(inv);
+                              setActiveTab('createInvoice');
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Chỉnh sửa hóa đơn"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          )}
                           {/* In hóa đơn */}
                           <button
                             onClick={() => {
