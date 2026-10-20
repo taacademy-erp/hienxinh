@@ -30,14 +30,21 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex bg-[#FAF6F7] text-slate-800 antialiased font-sans">
-      {/* Sidebar - hidden on mobile, drawer on tablet, fixed on desktop */}
+
+      {/* ── Sidebar (always fixed, drawer on mobile / visible on desktop) ── */}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main Content Area */}
+      {/*
+        Desktop spacer: reserves 224px (same as sidebar width) in the flex layout
+        so main content doesn't slide under the fixed sidebar on large screens.
+        Hidden on mobile because sidebar becomes a drawer overlay there.
+      */}
+      <div className="hidden lg:block w-56 shrink-0" aria-hidden="true" />
+
+      {/* ── Main Content Area ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto h-screen">
         <Header onMenuToggle={() => setSidebarOpen(true)} />
 
-        {/* Extra bottom padding on mobile so content not hidden under BottomNav */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
           {activeTab === 'home'             && <TabHome />}
           {activeTab === 'customers'        && <TabCustomers />}
@@ -50,10 +57,10 @@ export default function App() {
         </main>
       </div>
 
-      {/* Bottom Navigation Bar - mobile only */}
+      {/* ── Bottom Nav (mobile only) ── */}
       <BottomNav />
 
-      {/* Global Modals & Notifications */}
+      {/* ── Global Modals & Notifications ── */}
       <InvoiceDetailModal />
       <Toast />
     </div>
