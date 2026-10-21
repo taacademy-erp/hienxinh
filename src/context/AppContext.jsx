@@ -35,8 +35,25 @@ const DEFAULT_BANK_ACCOUNTS = [
 ];
 
 export const AppProvider = ({ children }) => {
-  // Default: null so user sees the login page first
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hienxinh_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const saveUserSession = (userData) => {
+    setUser(userData);
+    try {
+      if (userData) {
+        localStorage.setItem('hienxinh_user', JSON.stringify(userData));
+      } else {
+        localStorage.removeItem('hienxinh_user');
+      }
+    } catch (e) {}
+  };
 
   const [activeTab, setActiveTab] = useState('home');
   const [isReportDropdownOpen, setIsReportDropdownOpen] = useState(true);
@@ -89,7 +106,7 @@ export const AppProvider = ({ children }) => {
     const role = normalizeRole(currentRole);
     if (role === 'chu') return true;
     if (role === 'ql') {
-      return !['businessReport', 'settings'].includes(tabKey);
+      return !['businessReport'].includes(tabKey);
     }
     if (role === 'nhanvien') {
       return !['invoicesList', 'businessReport', 'settings'].includes(tabKey);
@@ -114,7 +131,7 @@ export const AppProvider = ({ children }) => {
       nhanvien: { id: 5, username: 'nhanvien', name: 'Nguyễn Thảo (NV)', role: 'nhanvien', avatar: 'N' }
     };
     const newProfile = roleProfiles[newRole] || roleProfiles.chu;
-    setUser(newProfile);
+    saveUserSession(newProfile);
     addToast(`Đã chuyển sang vai trò: ${newRole === 'chu' ? 'Chủ' : newRole === 'ql' ? 'Quản lý' : 'Nhân viên'}`, 'info');
 
     if (!hasPermission(activeTab, newRole)) {
@@ -127,7 +144,7 @@ export const AppProvider = ({ children }) => {
     // 1. Try Supabase Auth/Users table first
     const sbUser = await supabaseService.login(username, password);
     if (sbUser) {
-      setUser(sbUser);
+      saveUserSession(sbUser);
       addToast(`Xin chào ${sbUser.name}! Đăng nhập thành công qua Supabase.`, 'success');
       setActiveTab('home');
       return true;
@@ -142,7 +159,7 @@ export const AppProvider = ({ children }) => {
       });
       const data = await res.json();
       if (data.success) {
-        setUser(data.user);
+        saveUserSession(data.user);
         addToast(`Xin chào ${data.user.name}! Đăng nhập thành công.`, 'success');
         setActiveTab('home');
         return true;
@@ -168,7 +185,7 @@ export const AppProvider = ({ children }) => {
         avatar = 'N';
       }
       const localProfile = { id: Date.now(), username, name, role: matchedRole, avatar };
-      setUser(localProfile);
+      saveUserSession(localProfile);
       addToast(`Đăng nhập thành công với vai trò ${matchedRole}!`, 'success');
       setActiveTab('home');
       return true;
@@ -180,7 +197,7 @@ export const AppProvider = ({ children }) => {
 
   // Logout handler
   const logout = () => {
-    setUser(null);
+    saveUserSession(null);
     addToast('Đã đăng xuất khỏi hệ thống.', 'info');
   };
 
@@ -458,8 +475,16 @@ export const AppProvider = ({ children }) => {
     addToast('Đã xóa hóa đơn thành công!', 'info');
   };
 
-  // Invoice editing state - for pre-filling TabCreateInvoice
-  const [editingInvoice, setEditingInvoice] = useState(null);
+  // Update invoice in-place (Supabase + Local)
+  const updateInvoice = async (id, updates) => {
+    setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...updates } : inv));
+    try {
+      await supabaseService.updateInvoice?.(id, updates);
+    } catch (e) {
+      console.warn('Supabase updateInvoice error:', e);
+    }
+    addToast('Cập nhật hóa đơn thành công!', 'success');
+  };
 
   // Add / Edit / Delete Customer (Supabase + Local)
   const addCustomer = async (custData) => {
@@ -576,6 +601,37 @@ export const AppProvider = ({ children }) => {
     addToast('Đã xóa khoản chi phí.', 'info');
   };
 
+  // Add / Edit / Delete Service (Supabase + Local)
+  const addService = async (serviceData) => {
+    try {
+      const sbSrv = await supabaseService.addService(serviceData);
+      if (sbSrv) {
+        setServices(prev => [...prev, sbSrv]);
+        addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
+        return true;
+      }
+    } catch (e) {}
+    setServices(prev => [...prev, serviceData]);
+    addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
+    return true;
+  };
+
+  const updateService = async (id, serviceData) => {
+    try {
+      await supabaseService.updateService(id, serviceData);
+    } catch (e) {}
+    setServices(prev => prev.map(s => s.id === id ? { ...s, ...serviceData } : s));
+    addToast('Đã cập nhật dịch vụ thành công!', 'success');
+  };
+
+  const deleteService = async (id) => {
+    try {
+      await supabaseService.deleteService(id);
+    } catch (e) {}
+    setServices(prev => prev.filter(s => s.id !== id));
+    addToast('Đã xóa dịch vụ.', 'info');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -595,14 +651,16 @@ export const AppProvider = ({ children }) => {
         expenses,
         services,
         setServices,
+        addService,
+        updateService,
+        deleteService,
         staff,
         addStaff,
         bankAccounts,
         addBankAccount,
         addInvoice,
         deleteInvoice,
-        editingInvoice,
-        setEditingInvoice,
+        updateInvoice,
         addCustomer,
         updateCustomer,
         deleteCustomer,

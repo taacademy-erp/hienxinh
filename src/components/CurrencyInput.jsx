@@ -31,8 +31,11 @@ export default function CurrencyInput({
     return formatNumber(value);
   });
 
-  // Đồng bộ khi value từ component cha thay đổi từ bên ngoài
+  const isFocusedRef = useRef(false);
+
+  // Đồng bộ khi value từ component cha thay đổi từ bên ngoài (chỉ khi ô không được focus để tránh can thiệp khi đang gõ)
   useEffect(() => {
+    if (isFocusedRef.current) return;
     const currentNum = Number(String(displayValue).replace(/\D/g, '')) || 0;
     const incomingNum = Number(value) || 0;
     if (incomingNum !== currentNum || (displayValue === '' && value !== '' && value !== null && value !== undefined)) {
@@ -86,6 +89,7 @@ export default function CurrencyInput({
   };
 
   const handleFocus = (e) => {
+    isFocusedRef.current = true;
     e.target.select();
     if (props.onFocus) {
       props.onFocus(e);
@@ -93,12 +97,15 @@ export default function CurrencyInput({
   };
 
   const handleBlur = (e) => {
+    isFocusedRef.current = false;
     // Khi rời khỏi ô, nếu ô trống thì hiển thị '0'
     if (displayValue === '') {
       setDisplayValue('0');
       if (onChange) {
         onChange(0);
       }
+    } else {
+      setDisplayValue(formatNumber(displayValue));
     }
     if (props.onBlur) {
       props.onBlur(e);

@@ -415,6 +415,22 @@ export const supabaseService = {
     }
   },
 
+  async updateService(id, updates) {
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return data;
+    } catch (e) {
+      return null;
+    }
+  },
+
   async deleteService(id) {
     try {
       const { error } = await supabase.from('services').delete().eq('id', id);

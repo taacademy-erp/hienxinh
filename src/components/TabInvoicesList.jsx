@@ -9,6 +9,7 @@ import {
   Edit2,
   Printer,
   Trash2,
+  X,
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
@@ -17,13 +18,14 @@ import {
   Coins
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
-import { formatCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
+import { formatCurrencyInput, parseCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
 
 export default function TabInvoicesList() {
   const {
     invoices,
     services,
     deleteInvoice,
+    updateInvoice,
     setActiveTab,
     formatNumber,
     formatVND,
@@ -31,13 +33,51 @@ export default function TabInvoicesList() {
     setSelectedInvoice,
     loadData,
     user,
-    normalizeRole,
-    editingInvoice,
-    setEditingInvoice
+    normalizeRole
   } = useApp();
 
   // Chỉ Chủ mới xem được cột tài chính (Tổng tiền, Đã TT, Còn lại)
   const showFinance = normalizeRole(user?.role) === 'chu';
+  const canEdit = normalizeRole(user?.role) !== 'nhanvien';
+  const canDelete = normalizeRole(user?.role) !== 'nhanvien'; // Chủ & QL đều xóa được
+
+  // Edit Invoice Modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editForm, setEditForm] = useState({});
+  const handleOpenEdit = (inv) => {
+    setEditForm({
+      id: inv.id,
+      code: inv.code,
+      date: inv.date,
+      customerName: inv.customerName,
+      customerPhone: inv.customerPhone,
+      serviceSummary: inv.serviceSummary,
+      totalAmount: inv.totalAmount,
+      paidAmount: inv.paidAmount ?? inv.totalAmount,
+      remainingAmount: inv.remainingAmount ?? 0,
+      paymentMethod: inv.paymentMethod || 'Chuyển khoản',
+      note: inv.note || ''
+    });
+    setEditModalOpen(true);
+  };
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    const tot = Number(editForm.totalAmount) || 0;
+    const paid = Number(editForm.paidAmount) || 0;
+    const rem = Math.max(0, tot - paid);
+    await updateInvoice(editForm.id, {
+      customerName: editForm.customerName,
+      customerPhone: editForm.customerPhone,
+      serviceSummary: editForm.serviceSummary,
+      totalAmount: tot,
+      paidAmount: paid,
+      remainingAmount: rem,
+      paymentMethod: editForm.paymentMethod,
+      note: editForm.note,
+      date: editForm.date
+    });
+    setEditModalOpen(false);
+  };
 
   // If role is Nhân viên, show forbidden message
   if (!hasPermission('invoicesList')) {
@@ -478,12 +518,9 @@ export default function TabInvoicesList() {
                             <Eye className="w-4 h-4" />
                           </button>
                           {/* Chỉnh sửa - Chủ & Quản lý */}
-                          {normalizeRole(user?.role) !== 'nhanvien' && (
+                          {canEdit && (
                           <button
-                            onClick={() => {
-                              setEditingInvoice(inv);
-                              setActiveTab('createInvoice');
-                            }}
+                            onClick={() => handleOpenEdit(inv)}
                             className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                             title="Chỉnh sửa hóa đơn"
                           >
@@ -501,8 +538,8 @@ export default function TabInvoicesList() {
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          {/* Xóa - chỉ Chủ */}
-                          {normalizeRole(user?.role) === 'chu' && (
+                          {/* Xóa - Chủ & Quản lý */}
+                          {canDelete && (
                           <button
                             onClick={() => {
                               if (confirm(`Bạn chắc chắn muốn xóa hóa đơn "${inv.code}"?`)) {
@@ -580,6 +617,148 @@ export default function TabInvoicesList() {
           </div>
         </div>
       </div>
+
+      {/* ── Edit Invoice Modal ── */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <h3 className="font-bold text-lg text-gray-900 font-sans">
+                Chỉnh sửa hóa đơn <span className="text-[#E60026]">{editForm.code}</span>
+              </h3>
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="mt-5 space-y-4">
+              {/* Ngày lập */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Ngày lập</label>
+                <input
+                  type="text"
+                  value={editForm.date || ''}
+                  onChange={e => setEditForm({ ...editForm, date: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  placeholder="dd/mm/yyyy"
+                />
+              </div>
+
+              {/* Khách hàng */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Họ tên khách hàng</label>
+                  <input
+                    type="text"
+                    value={editForm.customerName || ''}
+                    onChange={e => setEditForm({ ...editForm, customerName: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Số điện thoại</label>
+                  <input
+                    type="text"
+                    value={editForm.customerPhone || ''}
+                    onChange={e => setEditForm({ ...editForm, customerPhone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+              </div>
+
+              {/* Dịch vụ */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Dịch vụ</label>
+                <input
+                  type="text"
+                  value={editForm.serviceSummary || ''}
+                  onChange={e => setEditForm({ ...editForm, serviceSummary: e.target.value })}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              {/* Tài chính - Cả Chủ & Quản lý đều có thể chỉnh sửa số tiền khi hóa đơn nhập sai */}
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Tổng tiền</label>
+                  <input
+                    type="text"
+                    value={formatCurrencyInput(editForm.totalAmount)}
+                    onChange={e => {
+                      const val = parseCurrencyInput(e.target.value);
+                      setEditForm({ ...editForm, totalAmount: val });
+                    }}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#E60026] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Đã thanh toán</label>
+                  <input
+                    type="text"
+                    value={formatCurrencyInput(editForm.paidAmount)}
+                    onChange={e => {
+                      const val = parseCurrencyInput(e.target.value);
+                      setEditForm({ ...editForm, paidAmount: val });
+                    }}
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-emerald-600 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Còn lại</label>
+                  <div className="px-3.5 py-2.5 border border-gray-100 rounded-xl text-sm font-bold text-amber-700 bg-gray-50 font-sans">
+                    {formatCurrencyInput(Math.max(0, (Number(editForm.totalAmount) || 0) - (Number(editForm.paidAmount) || 0)))}đ
+                  </div>
+                </div>
+              </div>
+
+              {/* PT thanh toán & Ghi chú */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Phương thức TT</label>
+                  <select
+                    value={editForm.paymentMethod || 'Chuyển khoản'}
+                    onChange={e => setEditForm({ ...editForm, paymentMethod: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  >
+                    <option value="Chuyển khoản">Chuyển khoản</option>
+                    <option value="Tiền mặt">Tiền mặt</option>
+                    <option value="Quẹt thẻ">Quẹt thẻ</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">Ghi chú</label>
+                  <input
+                    type="text"
+                    value={editForm.note || ''}
+                    onChange={e => setEditForm({ ...editForm, note: e.target.value })}
+                    placeholder="Ghi chú thêm..."
+                    className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-sm font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#E60026] hover:bg-[#c90021] text-white rounded-xl text-sm font-semibold shadow-md shadow-rose-600/20"
+                >
+                  Cập nhật hóa đơn
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

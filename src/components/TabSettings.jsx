@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Check, User } from 'lucide-react';
+import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Edit2, X, Check, User } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 
 export default function TabSettings() {
   const {
     services,
     setServices,
+    addService,
+    updateService,
+    deleteService,
     staff,
     user,
+    normalizeRole,
     switchRole,
     formatVND,
     formatNumber,
@@ -19,7 +23,12 @@ export default function TabSettings() {
   const [newServiceName, setNewServiceName] = useState('');
   const [newServicePrice, setNewServicePrice] = useState('');
 
-  const handleAddService = (e) => {
+  // Editing state for a service
+  const [editingService, setEditingService] = useState(null);
+  const [editServiceName, setEditServiceName] = useState('');
+  const [editServicePrice, setEditServicePrice] = useState('');
+
+  const handleAddService = async (e) => {
     e.preventDefault();
     if (!newServiceName || !newServicePrice) return;
     const newService = {
@@ -28,15 +37,45 @@ export default function TabSettings() {
       price: Number(newServicePrice),
       category: 'Phun xăm & Chăm sóc da'
     };
-    setServices([...services, newService]);
+    if (addService) {
+      await addService(newService);
+    } else {
+      setServices([...services, newService]);
+      addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
+    }
     setNewServiceName('');
     setNewServicePrice('');
-    addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
   };
 
-  const handleDeleteService = (id) => {
-    setServices(services.filter(s => s.id !== id));
-    addToast('Đã xóa dịch vụ.', 'info');
+  const handleOpenEdit = (s) => {
+    setEditingService(s);
+    setEditServiceName(s.name);
+    setEditServicePrice(s.price);
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingService || !editServiceName || editServicePrice === '') return;
+    const updated = {
+      name: editServiceName,
+      price: Number(editServicePrice)
+    };
+    if (updateService) {
+      await updateService(editingService.id, updated);
+    } else {
+      setServices(services.map(s => s.id === editingService.id ? { ...s, ...updated } : s));
+      addToast('Đã cập nhật dịch vụ thành công!', 'success');
+    }
+    setEditingService(null);
+  };
+
+  const handleDeleteService = async (id) => {
+    if (deleteService) {
+      await deleteService(id);
+    } else {
+      setServices(services.filter(s => s.id !== id));
+      addToast('Đã xóa dịch vụ.', 'info');
+    }
   };
 
   return (
@@ -146,12 +185,26 @@ export default function TabSettings() {
                         {formatNumber(s.price)} đ
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => handleDeleteService(s.id)}
-                          className="p-1 text-red-400 hover:text-red-600 rounded"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEdit(s)}
+                            className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Chỉnh sửa dịch vụ"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Bạn chắc chắn muốn xóa dịch vụ "${s.name}"?`)) {
+                                handleDeleteService(s.id);
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Xóa dịch vụ"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -310,6 +363,72 @@ export default function TabSettings() {
                 className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Service Modal */}
+      {editingService && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <h3 className="font-bold text-base text-gray-900 font-sans">
+                Chỉnh sửa dịch vụ <span className="text-[#E60026]">({editingService.id})</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingService(null)}
+                className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="mt-5 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Tên dịch vụ <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editServiceName}
+                  onChange={(e) => setEditServiceName(e.target.value)}
+                  placeholder="Nhập tên dịch vụ..."
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Giá niêm yết (VNĐ) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formatCurrencyInput(editServicePrice)}
+                  onChange={(e) => setEditServicePrice(parseCurrencyInput(e.target.value))}
+                  placeholder="0"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#E60026] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                />
+              </div>
+
+              <div className="pt-3 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingService(null)}
+                  className="px-4 py-2 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-medium"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#E60026] hover:bg-[#c90021] text-white rounded-xl text-xs font-semibold shadow-md shadow-rose-600/20"
+                >
+                  Cập nhật dịch vụ
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
