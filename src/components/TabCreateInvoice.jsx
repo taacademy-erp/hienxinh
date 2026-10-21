@@ -37,11 +37,15 @@ export default function TabCreateInvoice() {
   const [customerDob, setCustomerDob] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
 
-  // Service line items (Thành tiền = Giá niêm yết - Giá khuyến mãi)
+  // Service line items (Thành tiền = Giá niêm yết - Giá khuyến mãi, riêng filler: Giá niêm yết = Đơn giá/CC * Số lượng CC)
+  const isFillerService = (name) => (name || '').toLowerCase().includes('filler');
+
   const [serviceRows, setServiceRows] = useState([
     {
       id: 1,
       serviceName: 'Xử lý thâm',
+      unitPriceCc: 2000000,
+      quantityCc: 1,
       listedPrice: 2000000,
       discountPrice: 0,
       total: 2000000,
@@ -101,12 +105,19 @@ export default function TabCreateInvoice() {
   // Add new service row
   const handleAddRow = () => {
     const firstService = availableServices[0] || { name: 'Xử lý thâm', price: 2000000 };
+    const isFiller = isFillerService(firstService.name);
+    const unitPrice = firstService.price || 2000000;
+    const qty = 1;
+    const listed = isFiller ? unitPrice * qty : unitPrice;
+
     const newRow = {
       id: Date.now(),
       serviceName: firstService.name,
-      listedPrice: firstService.price,
+      unitPriceCc: unitPrice,
+      quantityCc: qty,
+      listedPrice: listed,
       discountPrice: 0,
-      total: firstService.price,
+      total: listed,
       onlineStaff: availableStaff[0]?.name || 'Nguyễn Thảo',
       onlineCommissionRate: 5,
       directStaff: availableStaff[1]?.name || 'Trần Minh Anh',
@@ -130,15 +141,22 @@ export default function TabCreateInvoice() {
   const handleServiceSelect = (id, serviceName) => {
     const found = availableServices.find(s => s.name === serviceName);
     const price = found ? found.price : 2000000;
+    const isFiller = isFillerService(serviceName);
+
     setServiceRows(serviceRows.map(r => {
       if (r.id === id) {
+        const qty = Number(r.quantityCc) || 1;
+        const unitPrice = isFiller ? (r.unitPriceCc ? Number(r.unitPriceCc) : price) : price;
+        const listed = isFiller ? unitPrice * qty : price;
         const discount = Number(r.discountPrice) || 0;
         return {
           ...r,
           serviceName,
-          listedPrice: price,
+          unitPriceCc: unitPrice,
+          quantityCc: qty,
+          listedPrice: listed,
           discountPrice: discount,
-          total: Math.max(0, price - discount)
+          total: Math.max(0, listed - discount)
         };
       }
       return r;
@@ -146,12 +164,23 @@ export default function TabCreateInvoice() {
   };
 
   // Update row values: thành tiền = giá niêm yết - giá khuyến mãi
+  // Với filler: Giá niêm yết = Đơn giá/CC * Số lượng CC
   const handleRowChange = (id, field, value) => {
     setServiceRows(serviceRows.map(r => {
       if (r.id === id) {
         const updated = { ...r, [field]: value };
-        const listed = field === 'listedPrice' ? (Number(value) || 0) : (Number(r.listedPrice) || 0);
-        const discount = field === 'discountPrice' ? (Number(value) || 0) : (Number(r.discountPrice) || 0);
+        const isFiller = isFillerService(updated.serviceName);
+
+        if (isFiller) {
+          if (field === 'unitPriceCc' || field === 'quantityCc') {
+            const unit = field === 'unitPriceCc' ? (Number(value) || 0) : (Number(r.unitPriceCc) || 0);
+            const qty = field === 'quantityCc' ? (Number(value) || 0) : (Number(r.quantityCc) || 0);
+            updated.listedPrice = unit * qty;
+          }
+        }
+
+        const listed = Number(updated.listedPrice) || 0;
+        const discount = Number(updated.discountPrice) || 0;
         updated.total = Math.max(0, listed - discount);
         return updated;
       }
@@ -171,6 +200,7 @@ export default function TabCreateInvoice() {
     }
 
     const formattedServices = serviceRows.map(r => {
+      const isFiller = isFillerService(r.serviceName);
       const listed = Number(r.listedPrice) || 0;
       const discount = Number(r.discountPrice) || 0;
       const actTotal = Math.max(0, listed - discount);
@@ -179,7 +209,11 @@ export default function TabCreateInvoice() {
       const exeRate = Number(r.execCommissionRate) || 0;
 
       return {
-        name: r.serviceName,
+        name: isFiller && r.quantityCc ? `${r.serviceName} (${r.quantityCc} CC)` : r.serviceName,
+        baseName: r.serviceName,
+        isFiller,
+        unitPriceCc: isFiller ? (Number(r.unitPriceCc) || 0) : undefined,
+        quantityCc: isFiller ? (Number(r.quantityCc) || 1) : undefined,
         listedPrice: listed,
         discountPrice: discount,
         total: actTotal,
@@ -373,7 +407,7 @@ export default function TabCreateInvoice() {
               <tr className="text-xs font-bold text-gray-600 border-b border-gray-100">
                 <th className="pb-3 px-2 w-10 text-center font-bold">STT</th>
                 <th className="pb-3 px-3 min-w-[200px]">Dịch vụ</th>
-                <th className="pb-3 px-3 min-w-[120px]">Giá niêm yết</th>
+                <th className="pb-3 px-3 min-w-[150px]">Giá niêm yết</th>
                 <th className="pb-3 px-3 min-w-[120px]">Giá khuyến mãi</th>
                 <th className="pb-3 px-3 min-w-[110px] text-center text-[#E60026]">Thành tiền</th>
                 <th className="pb-3 px-3 min-w-[170px] text-center">
@@ -429,12 +463,43 @@ export default function TabCreateInvoice() {
 
                     {/* Listed Price */}
                     <td className="py-3 px-3">
-                      <CurrencyInput
-                        value={row.listedPrice}
-                        onChange={(val) => handleRowChange(row.id, 'listedPrice', val)}
-                        showZero={true}
-                        className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
-                      />
+                      {isFillerService(row.serviceName) ? (
+                        <div className="space-y-1.5 min-w-[210px] bg-white p-2 rounded-xl border border-rose-200/80 shadow-xs">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-gray-500 w-16 shrink-0">Đơn giá/CC:</span>
+                            <CurrencyInput
+                              value={row.unitPriceCc}
+                              onChange={(val) => handleRowChange(row.id, 'unitPriceCc', val)}
+                              showZero={true}
+                              className="w-full px-2 py-1 bg-gray-50/70 border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                            />
+                            <span className="text-[10px] text-gray-400 font-semibold">đ</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-semibold text-gray-500 w-16 shrink-0">Số lượng:</span>
+                            <input
+                              type="number"
+                              min="0.1"
+                              step="0.5"
+                              value={row.quantityCc ?? 1}
+                              onChange={(e) => handleRowChange(row.id, 'quantityCc', e.target.value)}
+                              className="w-full px-2 py-1 bg-gray-50/70 border border-gray-200 rounded-lg text-xs text-right font-bold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                            />
+                            <span className="text-[10px] text-[#E60026] font-bold">CC</span>
+                          </div>
+                          <div className="pt-1 border-t border-dashed border-gray-100 flex items-center justify-between text-[11px]">
+                            <span className="text-gray-400">Giá niêm yết:</span>
+                            <span className="font-bold text-gray-800 font-sans">{formatCurrencyInput(row.listedPrice)}đ</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <CurrencyInput
+                          value={row.listedPrice}
+                          onChange={(val) => handleRowChange(row.id, 'listedPrice', val)}
+                          showZero={true}
+                          className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-right font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                        />
+                      )}
                     </td>
 
                     {/* Discount Price */}
