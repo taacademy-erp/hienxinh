@@ -31,8 +31,19 @@ export default function TabSettings() {
   const handleAddService = async (e) => {
     e.preventDefault();
     if (!newServiceName || !newServicePrice) return;
+    
+    // Tìm mã DV cao nhất để tránh trùng lặp PK
+    let maxId = 15;
+    services.forEach(s => {
+      const m = (s.id || '').match(/^DV(\d+)$/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxId) maxId = n;
+      }
+    });
+
     const newService = {
-      id: 'DV' + String(services.length + 1).padStart(2, '0'),
+      id: 'DV' + String(maxId + 1).padStart(2, '0'),
       name: newServiceName,
       price: Number(newServicePrice),
       category: 'Phun xăm & Chăm sóc da'

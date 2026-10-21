@@ -248,7 +248,7 @@ export const supabaseService = {
       remaining_amount: Number(inv.remainingAmount ?? 0),
       payment_method:   inv.paymentMethod || 'Chuyển khoản',
       bank_account:     inv.bankAccount || '',
-      notes:            inv.notes || '',
+      notes:            inv.notes || inv.note || '',
       status:           inv.status || 'Đã thanh toán',
       created_by:       inv.createdBy || ''
     };
@@ -301,10 +301,43 @@ export const supabaseService = {
     }
   },
 
+  async updateInvoice(id, updates) {
+    try {
+      const payload = {};
+      if (updates.customerName !== undefined) payload.customer_name = updates.customerName;
+      if (updates.customerPhone !== undefined) payload.customer_phone = updates.customerPhone;
+      if (updates.customerDob !== undefined) payload.customer_dob = updates.customerDob;
+      if (updates.serviceSummary !== undefined) payload.service_summary = updates.serviceSummary;
+      if (updates.services !== undefined) payload.services = updates.services;
+      if (updates.totalAmount !== undefined) payload.total_amount = Number(updates.totalAmount);
+      if (updates.paidAmount !== undefined) payload.paid_amount = Number(updates.paidAmount);
+      if (updates.remainingAmount !== undefined) payload.remaining_amount = Number(updates.remainingAmount);
+      if (updates.paymentMethod !== undefined) payload.payment_method = updates.paymentMethod;
+      if (updates.bankAccount !== undefined) payload.bank_account = updates.bankAccount;
+      if (updates.notes !== undefined || updates.note !== undefined) payload.notes = updates.notes || updates.note;
+      if (updates.date !== undefined) payload.date = updates.date;
+      if (updates.status !== undefined) payload.status = updates.status;
+
+      const numId = Number(id) || id;
+      const { data, error } = await supabase
+        .from('invoices')
+        .update(payload)
+        .eq('id', numId)
+        .select()
+        .single();
+
+      if (error || !data) throw error;
+      return normalizeInvoice(data);
+    } catch (e) {
+      console.error('🔴 Supabase updateInvoice FAILED:', e);
+      return null;
+    }
+  },
 
   async deleteInvoice(id) {
     try {
-      const { error } = await supabase.from('invoices').delete().eq('id', id);
+      const numId = Number(id) || id;
+      const { error } = await supabase.from('invoices').delete().eq('id', numId);
       return !error;
     } catch (e) {
       return false;
@@ -329,13 +362,24 @@ export const supabaseService = {
 
   async addExpense(exp) {
     try {
+      // Bảng expenses có check constraint: category phải là một trong 4 loại: 'Marketing', 'Mặt bằng', 'Mỹ phẩm', 'Nhân sự'
+      const validCategories = ['Marketing', 'Mặt bằng', 'Mỹ phẩm', 'Nhân sự'];
+      let matchedCat = validCategories.find(c => c.toLowerCase() === (exp.category || '').toLowerCase());
+      if (!matchedCat) {
+        const c = (exp.category || '').toLowerCase();
+        if (c.includes('mặt bằng') || c.includes('thuê') || c.includes('điện') || c.includes('nước')) matchedCat = 'Mặt bằng';
+        else if (c.includes('nhân sự') || c.includes('lương') || c.includes('thưởng') || c.includes('đồng phục') || c.includes('đào tạo')) matchedCat = 'Nhân sự';
+        else if (c.includes('marketing') || c.includes('quảng cáo') || c.includes('ads') || c.includes('fb') || c.includes('tiktok')) matchedCat = 'Marketing';
+        else matchedCat = 'Mỹ phẩm';
+      }
+
       const payload = {
-        code: exp.code,
-        date: exp.date,
+        code: exp.code || ('CP' + String(Date.now()).slice(-6)),
+        date: exp.date || new Date().toLocaleDateString('vi-VN'),
         amount: Number(exp.amount ?? 0),
-        category: exp.category,
-        content: exp.content,
-        notes: exp.notes || '',
+        category: matchedCat,
+        content: exp.content || 'Chi phí vận hành',
+        notes: exp.notes || exp.note || '',
         created_by: exp.createdBy || ''
       };
 
@@ -348,7 +392,7 @@ export const supabaseService = {
       if (error || !data) throw error;
       return normalizeExpense(data);
     } catch (e) {
-      console.warn('Supabase addExpense error:', e);
+      console.error('🔴 Supabase addExpense FAILED:', e);
       return null;
     }
   },
@@ -358,27 +402,41 @@ export const supabaseService = {
       const payload = {};
       if (updates.date !== undefined) payload.date = updates.date;
       if (updates.amount !== undefined) payload.amount = Number(updates.amount);
-      if (updates.category !== undefined) payload.category = updates.category;
+      if (updates.category !== undefined) {
+        const validCategories = ['Marketing', 'Mặt bằng', 'Mỹ phẩm', 'Nhân sự'];
+        let matchedCat = validCategories.find(c => c.toLowerCase() === (updates.category || '').toLowerCase());
+        if (!matchedCat) {
+          const c = (updates.category || '').toLowerCase();
+          if (c.includes('mặt bằng') || c.includes('thuê') || c.includes('điện') || c.includes('nước')) matchedCat = 'Mặt bằng';
+          else if (c.includes('nhân sự') || c.includes('lương') || c.includes('thưởng') || c.includes('đồng phục') || c.includes('đào tạo')) matchedCat = 'Nhân sự';
+          else if (c.includes('marketing') || c.includes('quảng cáo') || c.includes('ads') || c.includes('fb') || c.includes('tiktok')) matchedCat = 'Marketing';
+          else matchedCat = 'Mỹ phẩm';
+        }
+        payload.category = matchedCat;
+      }
       if (updates.content !== undefined) payload.content = updates.content;
-      if (updates.notes !== undefined) payload.notes = updates.notes;
+      if (updates.notes !== undefined || updates.note !== undefined) payload.notes = updates.notes || updates.note;
 
+      const numId = Number(id) || id;
       const { data, error } = await supabase
         .from('expenses')
         .update(payload)
-        .eq('id', id)
+        .eq('id', numId)
         .select()
         .single();
 
       if (error || !data) throw error;
       return normalizeExpense(data);
     } catch (e) {
+      console.error('🔴 Supabase updateExpense FAILED:', e);
       return null;
     }
   },
 
   async deleteExpense(id) {
     try {
-      const { error } = await supabase.from('expenses').delete().eq('id', id);
+      const numId = Number(id) || id;
+      const { error } = await supabase.from('expenses').delete().eq('id', numId);
       return !error;
     } catch (e) {
       return false;
@@ -396,30 +454,44 @@ export const supabaseService = {
       if (error || !data) return null;
       return data;
     } catch (e) {
+      console.warn('Supabase getServices error:', e);
       return null;
     }
   },
 
   async addService(srv) {
     try {
+      const payload = {
+        id: srv.id,
+        name: srv.name,
+        price: Number(srv.price || 0),
+        category: srv.category || 'Phun xăm & Chăm sóc da'
+      };
+
       const { data, error } = await supabase
         .from('services')
-        .insert([srv])
+        .insert([payload])
         .select()
         .single();
 
       if (error || !data) throw error;
       return data;
     } catch (e) {
+      console.error('🔴 Supabase addService FAILED:', e);
       return null;
     }
   },
 
   async updateService(id, updates) {
     try {
+      const payload = {};
+      if (updates.name !== undefined) payload.name = updates.name;
+      if (updates.price !== undefined) payload.price = Number(updates.price);
+      if (updates.category !== undefined) payload.category = updates.category;
+
       const { data, error } = await supabase
         .from('services')
-        .update(updates)
+        .update(payload)
         .eq('id', id)
         .select()
         .single();
@@ -427,6 +499,7 @@ export const supabaseService = {
       if (error || !data) throw error;
       return data;
     } catch (e) {
+      console.error('🔴 Supabase updateService FAILED:', e);
       return null;
     }
   },
@@ -436,6 +509,7 @@ export const supabaseService = {
       const { error } = await supabase.from('services').delete().eq('id', id);
       return !error;
     } catch (e) {
+      console.error('🔴 Supabase deleteService FAILED:', e);
       return false;
     }
   },

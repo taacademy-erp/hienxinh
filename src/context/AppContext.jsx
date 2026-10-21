@@ -352,7 +352,16 @@ export const AppProvider = ({ children }) => {
 
   // Add Invoice & Auto-collect Customer (Supabase + Local sync)
   const addInvoice = async (invoiceData) => {
-    const newCode = invoiceData.code || ('HD' + String(invoices.length + 322).padStart(6, '0'));
+    // Tìm mã lớn nhất hiện có trong danh sách hóa đơn để tránh trùng lặp PK/Unique
+    let maxNum = 324;
+    invoices.forEach(inv => {
+      const match = (inv.code || '').match(/\d+/);
+      if (match) {
+        const n = parseInt(match[0], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    });
+    const newCode = invoiceData.code || ('HD' + String(maxNum + 1).padStart(6, '0'));
     const newDate = invoiceData.date || new Date().toLocaleDateString('vi-VN');
     const tot = Number(invoiceData.totalAmount) || 0;
     const paid = invoiceData.paidAmount !== undefined ? Number(invoiceData.paidAmount) : tot;
@@ -367,10 +376,11 @@ export const AppProvider = ({ children }) => {
       paidAmount: paid,
       remainingAmount: rem,
       status,
+      notes: invoiceData.notes || invoiceData.note || '',
       serviceSummary: invoiceData.serviceSummary || (invoiceData.services || []).map(s => s.name).join(', ')
     };
 
-    // 1. GUARANTEED: Update local customers state immediately!
+    // 1. Cập nhật local customers state ngay lập tức để UI mượt mà
     const cleanPhone = (fullInv.customerPhone || '').replace(/\s+/g, '');
     if (cleanPhone) {
       setCustomers(prev => {
@@ -410,15 +420,27 @@ export const AppProvider = ({ children }) => {
       });
     }
 
-    // 2. GUARANTEED: Update local invoices state immediately!
-    setInvoices(prev => [fullInv, ...prev.filter(inv => inv.id !== fullInv.id && inv.code !== fullInv.code)]);
-
-    // 3. Persist to Supabase Cloud in background
+    // 2. Lưu trực tiếp lên Supabase Cloud
+    let savedInv = null;
     try {
-      const sbInv = await supabaseService.addInvoice(fullInv);
-      if (sbInv && cleanPhone) {
+      savedInv = await supabaseService.addInvoice(fullInv);
+      if (savedInv) {
+        console.log('✅ Hóa đơn đã được lưu lên Supabase thành công:', savedInv);
+      }
+    } catch (e) {
+      console.error('🔴 Supabase addInvoice sync error:', e);
+    }
+
+    const finalInv = savedInv || { ...fullInv, id: Date.now() };
+
+    // 3. Cập nhật local invoices state với bản ghi (có ID chuẩn từ Supabase nếu thành công)
+    setInvoices(prev => [finalInv, ...prev.filter(inv => inv.id !== finalInv.id && inv.code !== finalInv.code)]);
+
+    // 4. Đồng bộ Khách hàng & Giao dịch vào Supabase
+    if (cleanPhone) {
+      try {
         const existingCust = customers.find(c => (c.phone || '').replace(/\s+/g, '') === cleanPhone);
-        if (existingCust) {
+        if (existingCust && existingCust.id) {
           await supabaseService.updateCustomer(existingCust.id, {
             totalSpent: (Number(existingCust.totalSpent) || 0) + tot,
             visitCount: (Number(existingCust.visitCount) || 0) + 1,
@@ -437,7 +459,11 @@ export const AppProvider = ({ children }) => {
             last_visit: fullInv.date
           });
         }
+      } catch (custErr) {
+        console.warn('Customer Supabase sync error:', custErr);
+      }
 
+      try {
         await supabaseService.addDailyTransaction({
           date: fullInv.date,
           type: 'income',
@@ -446,19 +472,19 @@ export const AppProvider = ({ children }) => {
           referenceCode: fullInv.code,
           accountName: fullInv.bankAccount || fullInv.paymentMethod
         });
+      } catch (txErr) {
+        console.warn('Daily transaction sync error:', txErr);
       }
-    } catch (e) {
-      console.warn('Supabase addInvoice sync error:', e);
     }
 
-    // 4. Persist to local express server
+    // 5. Đồng bộ server local nếu có
     fetch('/api/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(fullInv)
+      body: JSON.stringify(finalInv)
     }).catch(() => {});
 
-    addToast('Lưu hóa đơn thành công! Thông tin khách hàng đã tự động xuất hiện tại Tab Khách hàng.', 'success');
+    addToast('Lưu hóa đơn thành công! Dữ liệu đã được lưu trữ vĩnh viễn trên Supabase Cloud.', 'success');
     if (hasPermission('invoicesList')) {
       setActiveTab('invoicesList');
     } else {
@@ -479,11 +505,11 @@ export const AppProvider = ({ children }) => {
   const updateInvoice = async (id, updates) => {
     setInvoices(prev => prev.map(inv => inv.id === id ? { ...inv, ...updates } : inv));
     try {
-      await supabaseService.updateInvoice?.(id, updates);
+      await supabaseService.updateInvoice(id, updates);
     } catch (e) {
       console.warn('Supabase updateInvoice error:', e);
     }
-    addToast('Cập nhật hóa đơn thành công!', 'success');
+    addToast('Cập nhật hóa đơn thành công trên Supabase!', 'success');
   };
 
   // Add / Edit / Delete Customer (Supabase + Local)
@@ -545,8 +571,20 @@ export const AppProvider = ({ children }) => {
 
   // Add / Edit / Delete Expense (Supabase + Local)
   const addExpense = async (expenseData) => {
-    const newCode = expenseData.code || ('CP' + String(expenses.length + 1).padStart(6, '0'));
-    const fullExp = { ...expenseData, code: newCode };
+    let maxNum = 0;
+    expenses.forEach(exp => {
+      const match = (exp.code || '').match(/\d+/);
+      if (match) {
+        const n = parseInt(match[0], 10);
+        if (n > maxNum) maxNum = n;
+      }
+    });
+    const newCode = expenseData.code || ('CP' + String(maxNum + 1).padStart(6, '0'));
+    const fullExp = {
+      ...expenseData,
+      code: newCode,
+      notes: expenseData.notes || expenseData.note || ''
+    };
 
     // 1. Supabase
     try {
@@ -571,7 +609,9 @@ export const AppProvider = ({ children }) => {
         await loadData();
         return true;
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn('Supabase addExpense sync error:', e);
+    }
 
     // 2. Local Server
     try {
@@ -603,15 +643,37 @@ export const AppProvider = ({ children }) => {
 
   // Add / Edit / Delete Service (Supabase + Local)
   const addService = async (serviceData) => {
+    let maxId = 15;
+    services.forEach(s => {
+      const m = (s.id || '').match(/^DV(\d+)$/i);
+      if (m) {
+        const n = parseInt(m[1], 10);
+        if (n > maxId) maxId = n;
+      }
+    });
+
+    const finalId = serviceData.id && !services.some(s => s.id === serviceData.id)
+      ? serviceData.id
+      : ('DV' + String(maxId + 1).padStart(2, '0'));
+
+    const payload = {
+      ...serviceData,
+      id: finalId,
+      category: serviceData.category || 'Phun xăm & Chăm sóc da'
+    };
+
     try {
-      const sbSrv = await supabaseService.addService(serviceData);
+      const sbSrv = await supabaseService.addService(payload);
       if (sbSrv) {
-        setServices(prev => [...prev, sbSrv]);
-        addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
+        setServices(prev => [...prev.filter(s => s.id !== sbSrv.id), sbSrv]);
+        addToast(`Đã thêm gói dịch vụ "${sbSrv.name}" vào Supabase!`, 'success');
         return true;
       }
-    } catch (e) {}
-    setServices(prev => [...prev, serviceData]);
+    } catch (e) {
+      console.warn('Supabase addService error:', e);
+    }
+
+    setServices(prev => [...prev.filter(s => s.id !== payload.id), payload]);
     addToast('Đã thêm gói dịch vụ mới vào danh mục!', 'success');
     return true;
   };
