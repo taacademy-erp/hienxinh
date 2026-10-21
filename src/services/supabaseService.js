@@ -554,6 +554,16 @@ export const supabaseService = {
     }
   },
 
+  async deleteStaff(id) {
+    try {
+      const { error } = await supabase.from('staff').delete().eq('id', id);
+      return !error;
+    } catch (e) {
+      console.error('🔴 Supabase deleteStaff FAILED:', e);
+      return false;
+    }
+  },
+
   // 7. BANK ACCOUNTS
   async getBankAccounts() {
     try {
@@ -590,6 +600,16 @@ export const supabaseService = {
       return normalizeBankAccount(data);
     } catch (e) {
       return null;
+    }
+  },
+
+  async deleteBankAccount(id) {
+    try {
+      const { error } = await supabase.from('bank_accounts').delete().eq('id', id);
+      return !error;
+    } catch (e) {
+      console.error('🔴 Supabase deleteBankAccount FAILED:', e);
+      return false;
     }
   },
 

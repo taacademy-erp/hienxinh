@@ -254,9 +254,18 @@ export const AppProvider = ({ children }) => {
 
   // Add Staff Member (Supabase + Local sync)
   const addStaff = async (staffData) => {
+    let maxId = 0;
+    staff.forEach(s => {
+      const m = (s.id || '').match(/\d+/);
+      if (m) {
+        const n = parseInt(m[0], 10);
+        if (n > maxId) maxId = n;
+      }
+    });
+
     const initials = (staffData.name || '').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
     const newStf = {
-      id: staffData.id || ('NV' + String(staff.length + 1).padStart(2, '0')),
+      id: staffData.id || ('NV' + String(maxId + 1).padStart(2, '0')),
       name: staffData.name,
       role: staffData.role || 'Tư vấn & Kỹ thuật viên',
       phone: staffData.phone || '',
@@ -274,7 +283,7 @@ export const AppProvider = ({ children }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newStf)
         }).catch(() => {});
-        setStaff(prev => [...prev, sbStaff]);
+        setStaff(prev => [...prev.filter(s => s.id !== sbStaff.id), sbStaff]);
         addToast(`Đã lưu nhân viên lên Supabase: ${sbStaff.name}`, 'success');
         return sbStaff;
       }
@@ -289,21 +298,42 @@ export const AppProvider = ({ children }) => {
       });
       const data = await res.json();
       if (data.success && data.staff) {
-        setStaff(prev => [...prev, data.staff]);
+        setStaff(prev => [...prev.filter(s => s.id !== data.staff.id), data.staff]);
         addToast(`Đã thêm nhân viên: ${data.staff.name}`, 'success');
         return data.staff;
       }
     } catch (e) {}
 
-    setStaff(prev => [...prev, newStf]);
+    setStaff(prev => [...prev.filter(s => s.id !== newStf.id), newStf]);
     addToast(`Đã thêm nhân viên mới: ${newStf.name}`, 'success');
     return newStf;
   };
 
+  // Delete Staff Member (Supabase + Local sync)
+  const deleteStaff = async (id) => {
+    try {
+      await supabaseService.deleteStaff(id);
+    } catch (e) {
+      console.warn('Supabase deleteStaff error:', e);
+    }
+    fetch(`/api/staff/${id}`, { method: 'DELETE' }).catch(() => {});
+    setStaff(prev => prev.filter(s => s.id !== id));
+    addToast('Đã xóa nhân viên thành công!', 'info');
+  };
+
   // Add Bank Account (Supabase + Local sync)
   const addBankAccount = async (bankData) => {
+    let maxAcc = 0;
+    bankAccounts.forEach(b => {
+      const m = (b.id || '').match(/\d+/);
+      if (m) {
+        const n = parseInt(m[0], 10);
+        if (n > maxAcc) maxAcc = n;
+      }
+    });
+
     const newAcc = {
-      id: bankData.id || ('acc' + (bankAccounts.length + 1)),
+      id: bankData.id || ('acc' + (maxAcc + 1)),
       name: bankData.name || `${bankData.bankName} Spa`,
       bankName: bankData.bankName,
       accountNumber: bankData.accountNumber,
@@ -320,7 +350,7 @@ export const AppProvider = ({ children }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newAcc)
         }).catch(() => {});
-        setBankAccounts(prev => [...prev, sbAcc]);
+        setBankAccounts(prev => [...prev.filter(b => b.id !== sbAcc.id), sbAcc]);
         addToast(`Đã lưu tài khoản lên Supabase: ${sbAcc.name}`, 'success');
         return sbAcc;
       }
@@ -335,15 +365,27 @@ export const AppProvider = ({ children }) => {
       });
       const data = await res.json();
       if (data.success && data.account) {
-        setBankAccounts(prev => [...prev, data.account]);
+        setBankAccounts(prev => [...prev.filter(b => b.id !== data.account.id), data.account]);
         addToast(`Đã thêm thông tin ngân hàng: ${data.account.name}`, 'success');
         return data.account;
       }
     } catch (e) {}
 
-    setBankAccounts(prev => [...prev, newAcc]);
+    setBankAccounts(prev => [...prev.filter(b => b.id !== newAcc.id), newAcc]);
     addToast(`Đã thêm tài khoản: ${newAcc.name}`, 'success');
     return newAcc;
+  };
+
+  // Delete Bank Account (Supabase + Local sync)
+  const deleteBankAccount = async (id) => {
+    try {
+      await supabaseService.deleteBankAccount(id);
+    } catch (e) {
+      console.warn('Supabase deleteBankAccount error:', e);
+    }
+    fetch(`/api/bank-accounts/${id}`, { method: 'DELETE' }).catch(() => {});
+    setBankAccounts(prev => prev.filter(b => b.id !== id));
+    addToast('Đã xóa tài khoản ngân hàng thành công!', 'info');
   };
 
   useEffect(() => {
@@ -718,8 +760,10 @@ export const AppProvider = ({ children }) => {
         deleteService,
         staff,
         addStaff,
+        deleteStaff,
         bankAccounts,
         addBankAccount,
+        deleteBankAccount,
         addInvoice,
         deleteInvoice,
         updateInvoice,

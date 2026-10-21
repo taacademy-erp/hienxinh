@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Edit2, X, Check, User } from 'lucide-react';
+import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Edit2, X, Check, User, Users, CreditCard, Building2, Phone, Percent } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 
 export default function TabSettings() {
@@ -11,6 +11,11 @@ export default function TabSettings() {
     updateService,
     deleteService,
     staff,
+    addStaff,
+    deleteStaff,
+    bankAccounts,
+    addBankAccount,
+    deleteBankAccount,
     user,
     normalizeRole,
     switchRole,
@@ -19,7 +24,7 @@ export default function TabSettings() {
     addToast
   } = useApp();
 
-  const [activeSubTab, setActiveSubTab] = useState('services'); // 'services' | 'permissions' | 'spa'
+  const [activeSubTab, setActiveSubTab] = useState('services'); // 'services' | 'staff' | 'bank' | 'permissions' | 'spa'
   const [newServiceName, setNewServiceName] = useState('');
   const [newServicePrice, setNewServicePrice] = useState('');
 
@@ -27,6 +32,22 @@ export default function TabSettings() {
   const [editingService, setEditingService] = useState(null);
   const [editServiceName, setEditServiceName] = useState('');
   const [editServicePrice, setEditServicePrice] = useState('');
+
+  // Staff form state
+  const [staffForm, setStaffForm] = useState({
+    name: '',
+    role: 'Kỹ thuật viên chính',
+    phone: '',
+    commissionRate: 5
+  });
+
+  // Bank account form state
+  const [bankForm, setBankForm] = useState({
+    bankName: '',
+    accountNumber: '',
+    accountHolder: '',
+    name: ''
+  });
 
   const handleAddService = async (e) => {
     e.preventDefault();
@@ -89,6 +110,48 @@ export default function TabSettings() {
     }
   };
 
+  const handleAddStaffSubmit = async (e) => {
+    e.preventDefault();
+    if (!staffForm.name.trim()) {
+      addToast('Vui lòng nhập tên nhân viên!', 'error');
+      return;
+    }
+    await addStaff(staffForm);
+    setStaffForm({
+      name: '',
+      role: 'Kỹ thuật viên chính',
+      phone: '',
+      commissionRate: 5
+    });
+  };
+
+  const handleDeleteStaff = async (id, name) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa nhân viên "${name}" khỏi hệ thống không?`)) {
+      await deleteStaff(id);
+    }
+  };
+
+  const handleAddBankSubmit = async (e) => {
+    e.preventDefault();
+    if (!bankForm.bankName.trim() || !bankForm.accountNumber.trim()) {
+      addToast('Vui lòng nhập tên ngân hàng và số tài khoản!', 'error');
+      return;
+    }
+    await addBankAccount(bankForm);
+    setBankForm({
+      bankName: '',
+      accountNumber: '',
+      accountHolder: '',
+      name: ''
+    });
+  };
+
+  const handleDeleteBank = async (id, name, accNum) => {
+    if (confirm(`Bạn có chắc chắn muốn xóa tài khoản ngân hàng "${name}" (${accNum || 'Tiền mặt'}) không?`)) {
+      await deleteBankAccount(id);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Title */}
@@ -102,20 +165,40 @@ export default function TabSettings() {
       </div>
 
       {/* Sub tabs */}
-      <div className="flex items-center gap-3 border-b border-gray-200">
+      <div className="flex items-center gap-2 sm:gap-3 border-b border-gray-200 overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveSubTab('services')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeSubTab === 'services'
               ? 'border-[#E60026] text-[#E60026]'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
-          Gói dịch vụ & Bảng giá
+          Gói dịch vụ & Bảng giá ({services.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('staff')}
+          className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            activeSubTab === 'staff'
+              ? 'border-[#E60026] text-[#E60026]'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          Quản lý nhân viên ({staff.length})
+        </button>
+        <button
+          onClick={() => setActiveSubTab('bank')}
+          className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
+            activeSubTab === 'bank'
+              ? 'border-[#E60026] text-[#E60026]'
+              : 'border-transparent text-gray-500 hover:text-gray-900'
+          }`}
+        >
+          Tài khoản ngân hàng ({bankAccounts.length})
         </button>
         <button
           onClick={() => setActiveSubTab('permissions')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeSubTab === 'permissions'
               ? 'border-[#E60026] text-[#E60026]'
               : 'border-transparent text-gray-500 hover:text-gray-900'
@@ -125,13 +208,13 @@ export default function TabSettings() {
         </button>
         <button
           onClick={() => setActiveSubTab('spa')}
-          className={`pb-3 text-sm font-semibold border-b-2 transition-all ${
+          className={`pb-3 text-xs sm:text-sm font-semibold border-b-2 whitespace-nowrap transition-all ${
             activeSubTab === 'spa'
               ? 'border-[#E60026] text-[#E60026]'
               : 'border-transparent text-gray-500 hover:text-gray-900'
           }`}
         >
-          Thông tin Hiền Xinh Spa
+          Thông tin Spa
         </button>
       </div>
 
@@ -216,6 +299,266 @@ export default function TabSettings() {
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB: Staff Management */}
+      {activeSubTab === 'staff' && (
+        <div className="space-y-6">
+          {/* Add Staff Box */}
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <h3 className="font-bold text-sm text-gray-900 mb-3 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[#E60026]" />
+              <span>Thêm nhân viên mới vào hệ thống</span>
+            </h3>
+            <form onSubmit={handleAddStaffSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Họ và tên <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Hoàng Thu Trang"
+                  value={staffForm.name}
+                  onChange={(e) => setStaffForm({ ...staffForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Chức vụ / Vai trò
+                </label>
+                <select
+                  value={staffForm.role}
+                  onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                >
+                  <option value="Kỹ thuật viên chính">Kỹ thuật viên chính</option>
+                  <option value="Kỹ thuật viên phun xăm">Kỹ thuật viên phun xăm</option>
+                  <option value="Chuyên viên chăm sóc da">Chuyên viên chăm sóc da</option>
+                  <option value="Tư vấn Online & Trực tiếp">Tư vấn Online & Trực tiếp</option>
+                  <option value="Tư vấn Online">Tư vấn Online</option>
+                  <option value="Tư vấn trực tiếp">Tư vấn trực tiếp</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Số điện thoại
+                </label>
+                <input
+                  type="text"
+                  placeholder="09xx xxx xxx"
+                  value={staffForm.phone}
+                  onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                />
+              </div>
+
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Hoa hồng (%)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={staffForm.commissionRate}
+                    onChange={(e) => setStaffForm({ ...staffForm, commissionRate: Number(e.target.value) || 0 })}
+                    className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-5 py-2 h-[38px] bg-[#E60026] hover:bg-[#c90021] text-white rounded-xl text-xs font-semibold shadow-sm transition-all whitespace-nowrap"
+                >
+                  Lưu nhân viên
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* List of Staff */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <Users className="w-4 h-4 text-[#E60026]" />
+                <span>Danh sách nhân sự & Kỹ thuật viên ({staff.length})</span>
+              </h3>
+              <span className="text-xs text-gray-500">Xóa nhân viên khi cần thiết</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-semibold uppercase">
+                  <tr>
+                    <th className="py-3 px-4 w-16">Mã</th>
+                    <th className="py-3 px-4">Họ và tên</th>
+                    <th className="py-3 px-4">Chức vụ / Vai trò</th>
+                    <th className="py-3 px-4">Số điện thoại</th>
+                    <th className="py-3 px-4 text-center">Hoa hồng mặc định</th>
+                    <th className="py-3 px-4 text-center w-24">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {staff.map(s => (
+                    <tr key={s.id} className="hover:bg-rose-50/20">
+                      <td className="py-3 px-4 font-sans font-bold text-gray-500">{s.id}</td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-full ${s.color || 'bg-rose-600'} text-white font-bold flex items-center justify-center text-xs shadow-2xs`}>
+                            {s.initials || (s.name || '').slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="font-bold text-gray-900">{s.name}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-gray-700">{s.role}</td>
+                      <td className="py-3 px-4 font-sans text-gray-600">{s.phone || '—'}</td>
+                      <td className="py-3 px-4 text-center font-bold text-[#E60026] font-sans">
+                        {s.commissionRate || 5}%
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => handleDeleteStaff(s.id, s.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors font-medium shadow-2xs"
+                          title="Xóa nhân viên"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Xóa</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SUBTAB: Bank Accounts Management */}
+      {activeSubTab === 'bank' && (
+        <div className="space-y-6">
+          {/* Add Bank Account Box */}
+          <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
+            <h3 className="font-bold text-sm text-gray-900 mb-3 flex items-center gap-2">
+              <Plus className="w-4 h-4 text-[#E60026]" />
+              <span>Thêm tài khoản ngân hàng nhận tiền</span>
+            </h3>
+            <form onSubmit={handleAddBankSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Tên ngân hàng <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: Vietcombank, Techcombank, MB..."
+                  value={bankForm.bankName}
+                  onChange={(e) => setBankForm({ ...bankForm, bankName: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Số tài khoản (STK) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ví dụ: 1903668899..."
+                  value={bankForm.accountNumber}
+                  onChange={(e) => setBankForm({ ...bankForm, accountNumber: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">
+                  Chủ tài khoản <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="NGUYEN THI HIEN"
+                  value={bankForm.accountHolder}
+                  onChange={(e) => setBankForm({ ...bankForm, accountHolder: e.target.value.toUpperCase() })}
+                  className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs uppercase focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans font-semibold"
+                />
+              </div>
+
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Tên hiển thị gọi nhớ
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="VD: Vietcombank Spa"
+                    value={bankForm.name}
+                    onChange={(e) => setBankForm({ ...bankForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="px-5 py-2 h-[38px] bg-[#E60026] hover:bg-[#c90021] text-white rounded-xl text-xs font-semibold shadow-sm transition-all whitespace-nowrap"
+                >
+                  Lưu tài khoản
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* List of Bank Accounts */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-[#E60026]" />
+                <span>Danh sách tài khoản ngân hàng nhận tiền ({bankAccounts.length})</span>
+              </h3>
+              <span className="text-xs text-gray-500">Xóa những tài khoản không dùng</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-gray-50 text-gray-600 font-semibold uppercase">
+                  <tr>
+                    <th className="py-3 px-4">Tên hiển thị</th>
+                    <th className="py-3 px-4">Ngân hàng</th>
+                    <th className="py-3 px-4">Số tài khoản</th>
+                    <th className="py-3 px-4">Chủ tài khoản</th>
+                    <th className="py-3 px-4 text-center w-24">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {bankAccounts.map(b => (
+                    <tr key={b.id} className="hover:bg-rose-50/20">
+                      <td className="py-3.5 px-4 font-bold text-gray-900 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-[#E60026] shrink-0" />
+                        <span>{b.name}</span>
+                      </td>
+                      <td className="py-3.5 px-4 font-semibold text-gray-700">{b.bankName || b.name}</td>
+                      <td className="py-3.5 px-4 font-sans font-bold text-[#E60026]">{b.accountNumber || '—'}</td>
+                      <td className="py-3.5 px-4 uppercase font-semibold text-gray-800">{b.accountHolder || '—'}</td>
+                      <td className="py-3.5 px-4 text-center">
+                        <button
+                          onClick={() => handleDeleteBank(b.id, b.name, b.accountNumber)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors font-medium shadow-2xs"
+                          title="Xóa tài khoản không dùng"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Xóa</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

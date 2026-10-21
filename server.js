@@ -181,6 +181,13 @@ app.post('/api/staff', (req, res) => {
   res.json({ success: true, staff: newStaff });
 });
 
+app.delete('/api/staff/:id', (req, res) => {
+  const db = readDB();
+  db.staff = (db.staff || []).filter(s => String(s.id) !== String(req.params.id));
+  writeDB(db);
+  res.json({ success: true });
+});
+
 // Bank Accounts API
 app.get('/api/bank-accounts', (req, res) => {
   const db = readDB();
@@ -205,6 +212,13 @@ app.post('/api/bank-accounts', (req, res) => {
   db.bankAccounts.push(newAccount);
   writeDB(db);
   res.json({ success: true, account: newAccount });
+});
+
+app.delete('/api/bank-accounts/:id', (req, res) => {
+  const db = readDB();
+  db.bankAccounts = (db.bankAccounts || []).filter(b => String(b.id) !== String(req.params.id));
+  writeDB(db);
+  res.json({ success: true });
 });
 
 // Invoices API
