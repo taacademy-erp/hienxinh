@@ -325,7 +325,7 @@ export default function TabBusinessReport() {
     return list;
   }, [bankAccounts, dateFilteredReceipts, totalActualRevenue]);
 
-  // SERVICES BREAKDOWN (Based on actual revenue proportion)
+  // SERVICES BREAKDOWN (Based on actual revenue proportion per service name)
   const servicesBreakdown = useMemo(() => {
     if (dateFilteredReceipts.length === 0) return [];
     const map = {};
@@ -336,21 +336,36 @@ export default function TabBusinessReport() {
         // Distribute receipt amount across services proportionally to their totals
         const totalSvcCost = svcs.reduce((acc, s) => acc + (Number(s.total) || 0), 0) || 1;
         svcs.forEach(s => {
-          const cat = s.category || (s.name.includes('Phun') || s.name.includes('môi') || s.name.includes('mày') ? 'Phun xăm thẩm mỹ' : 'Chăm sóc da & Thẩm mỹ');
+          const svcName = s.name || s.baseName || 'Dịch vụ spa';
           const portion = (Number(s.total || 0) / totalSvcCost) * r.amount;
-          map[cat] = (map[cat] || 0) + portion;
+          if (!map[svcName]) {
+            map[svcName] = {
+              name: svcName,
+              category: s.category || '',
+              amount: 0
+            };
+          }
+          map[svcName].amount += portion;
         });
       } else {
-        const cat = 'Dịch vụ làm đẹp tổng hợp';
-        map[cat] = (map[cat] || 0) + r.amount;
+        const svcName = r.serviceSummary || 'Dịch vụ spa';
+        if (!map[svcName]) {
+          map[svcName] = {
+            name: svcName,
+            category: '',
+            amount: 0
+          };
+        }
+        map[svcName].amount += r.amount;
       }
     });
 
-    const colors = ['#E60026', '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899'];
-    return Object.entries(map).map(([name, amount], i) => ({
-      name,
-      amount: Math.round(amount),
-      pct: totalActualRevenue > 0 ? Number(((amount / totalActualRevenue) * 100).toFixed(1)) : 0,
+    const colors = ['#E60026', '#3B82F6', '#F59E0B', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+    return Object.values(map).map((item, i) => ({
+      name: item.name,
+      category: item.category,
+      amount: Math.round(item.amount),
+      pct: totalActualRevenue > 0 ? Number(((item.amount / totalActualRevenue) * 100).toFixed(1)) : 0,
       color: colors[i % colors.length]
     })).sort((a, b) => b.amount - a.amount);
   }, [dateFilteredReceipts, totalActualRevenue]);
@@ -541,7 +556,7 @@ export default function TabBusinessReport() {
                   DOANH THU THEO DỊCH VỤ (THỰC TẾ)
                 </h3>
               </div>
-              <span className="text-xs text-gray-400">{servicesBreakdown.length} nhóm dịch vụ</span>
+              <span className="text-xs text-gray-400">{servicesBreakdown.length} dịch vụ</span>
             </div>
 
             <div className="mt-5 space-y-4">
@@ -551,9 +566,14 @@ export default function TabBusinessReport() {
                 servicesBreakdown.map((item, idx) => (
                   <div key={idx} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2 font-medium text-gray-700">
-                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                        <span>{item.name}</span>
+                      <div className="flex items-center gap-2 font-medium text-gray-800">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="font-semibold text-gray-900">{item.name}</span>
+                        {item.category && item.category !== item.name && (
+                          <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                            {item.category}
+                          </span>
+                        )}
                       </div>
                       <span className="font-bold text-gray-900 font-sans">
                         {formatNumber(item.amount)}đ{' '}
@@ -577,7 +597,7 @@ export default function TabBusinessReport() {
           </div>
 
           <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-            <span>Phân bổ doanh thu thực nhận theo từng mảng dịch vụ</span>
+            <span>Phân bổ doanh thu thực nhận theo từng dịch vụ</span>
             <span className="font-bold text-gray-900 font-sans">{formatVND(totalActualRevenue)}</span>
           </div>
         </div>
