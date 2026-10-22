@@ -796,16 +796,24 @@ export default function TabCreateInvoice() {
               onChange={(e) => setBankAccount(e.target.value)}
               className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
             >
-              {(availableBanks || []).map(b => (
-                <option key={b.id} value={b.name}>
-                  {b.name} {b.accountNumber && b.accountNumber !== 'TIENMAT' ? `(${b.bankName || ''} - STK: ${b.accountNumber} - ${b.accountHolder || ''})` : ''}
-                </option>
-              ))}
+              {(availableBanks || []).map(b => {
+                const val = b.accountNumber && b.accountNumber !== 'TIENMAT'
+                  ? `${b.name} - STK: ${b.accountNumber}`
+                  : b.name;
+                return (
+                  <option key={b.id} value={val}>
+                    {b.name} {b.accountNumber && b.accountNumber !== 'TIENMAT' ? `(STK: ${b.accountNumber} - ${b.accountHolder || ''})` : ''}
+                  </option>
+                );
+              })}
             </select>
 
             {/* Display detailed bank information (STK - Chủ tài khoản - Ngân hàng) */}
             {(() => {
-              const activeBank = (availableBanks || []).find(b => b.name === bankAccount) || (availableBanks || [])[0];
+              const activeBank = (availableBanks || []).find(b => 
+                b.name === bankAccount || 
+                (b.accountNumber && b.accountNumber !== 'TIENMAT' && bankAccount.includes(b.accountNumber))
+              ) || (availableBanks || [])[0];
               if (!activeBank) return null;
               return (
                 <div className="mt-2.5 p-3 rounded-xl bg-[#FFF5F6] border border-rose-100 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">

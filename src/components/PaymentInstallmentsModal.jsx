@@ -248,11 +248,16 @@ export default function PaymentInstallmentsModal({ invoice, onClose }) {
                     onChange={(e) => setPayBankAccount(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-1 focus:ring-rose-500"
                   >
-                    {bankAccounts.map(b => (
-                      <option key={b.id} value={b.name}>
-                        {b.name} {b.accountNumber && b.accountNumber !== 'TIENMAT' ? `(STK: ${b.accountNumber} - ${b.accountHolder || ''})` : ''}
-                      </option>
-                    ))}
+                    {bankAccounts.map(b => {
+                      const val = b.accountNumber && b.accountNumber !== 'TIENMAT'
+                        ? `${b.name} - STK: ${b.accountNumber}`
+                        : b.name;
+                      return (
+                        <option key={b.id} value={val}>
+                          {b.name} {b.accountNumber && b.accountNumber !== 'TIENMAT' ? `(STK: ${b.accountNumber} - ${b.accountHolder || ''})` : ''}
+                        </option>
+                      );
+                    })}
                     <option value="Tiền mặt tại quầy">Tiền mặt tại quầy</option>
                   </select>
                 </div>
