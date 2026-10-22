@@ -7,13 +7,13 @@ const HARDCODED_KEY = 'sb_publishable_TgaFe-4QlZucygM1xC7BLQ_vBYF5Jaa';
 
 // Ưu tiên env var nếu hợp lệ (chứa project id đúng), fallback về hardcoded
 const rawUrl = (() => {
-  const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || '';
   // Chỉ dùng env var nếu chứa project id đúng
   if (envUrl && envUrl.includes('khulunssdjnckelwhcww')) return envUrl;
   return HARDCODED_URL;
 })();
 
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || HARDCODED_KEY;
+const supabaseKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || HARDCODED_KEY;
 
 // Chuẩn hóa URL: loại bỏ /rest/v1/ hoặc dấu gạch chéo cuối nếu có
 export const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');

@@ -78,6 +78,12 @@ export default function InvoiceDetailModal() {
                 {selectedInvoice.paymentMethod} ({selectedInvoice.bankAccount})
               </span>
             </div>
+            {(selectedInvoice.notes || selectedInvoice.note) && (
+              <div className="col-span-2 pt-2 border-t border-gray-200/80">
+                <span className="text-gray-500 block">Ghi chú:</span>
+                <span className="text-gray-800 font-medium italic">{selectedInvoice.notes || selectedInvoice.note}</span>
+              </div>
+            )}
           </div>
 
           {/* Table of Services */}
@@ -127,6 +133,43 @@ export default function InvoiceDetailModal() {
                 <div>
                   Thực hiện: <strong>{selectedInvoice.services[0].execStaff}</strong> (+{formatCurrencyInput(selectedInvoice.services[0].execCommissionAmount)} đ)
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Lịch sử các đợt thanh toán */}
+          {Array.isArray(selectedInvoice.payments) && selectedInvoice.payments.length > 0 && (
+            <div className="pt-4 border-t border-gray-200">
+              <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">Lịch sử thanh toán ({selectedInvoice.payments.length} đợt)</h4>
+              <div className="rounded-xl border border-gray-200 overflow-hidden text-xs">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-600 font-semibold">
+                    <tr>
+                      <th className="py-2 px-3 w-12 text-center">Đợt</th>
+                      <th className="py-2 px-3">Thời gian</th>
+                      <th className="py-2 px-3 text-right">Số tiền nhận</th>
+                      <th className="py-2 px-3">Hình thức</th>
+                      <th className="py-2 px-3">Tài khoản nhận / Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {selectedInvoice.payments.map((p, idx) => (
+                      <tr key={p.id || idx} className="hover:bg-gray-50/50">
+                        <td className="py-2 px-3 text-center font-bold text-gray-700">#{idx + 1}</td>
+                        <td className="py-2 px-3 font-sans text-gray-800">
+                          {p.date} {p.time && p.time !== 'Ban đầu' ? `(${p.time})` : ''}
+                        </td>
+                        <td className="py-2 px-3 text-right font-bold text-emerald-600 font-sans">
+                          +{formatCurrencyInput(p.amount)} đ
+                        </td>
+                        <td className="py-2 px-3 font-medium text-gray-700">{p.paymentMethod}</td>
+                        <td className="py-2 px-3 text-gray-600">
+                          {p.bankAccount ? `${p.bankAccount}` : ''} {p.note ? `• ${p.note}` : ''}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           )}

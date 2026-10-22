@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
 import { formatCurrencyInput, parseCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
+import PaymentInstallmentsModal from './PaymentInstallmentsModal';
 
 export default function TabInvoicesList() {
   const {
@@ -41,6 +42,9 @@ export default function TabInvoicesList() {
   const canEdit = normalizeRole(user?.role) !== 'nhanvien';
   const canDelete = normalizeRole(user?.role) !== 'nhanvien'; // Chủ & QL đều xóa được
 
+  // Modal đợt thanh toán (Installments) khi bấm vào tên khách hàng
+  const [paymentModalInvoice, setPaymentModalInvoice] = useState(null);
+
   // Edit Invoice Modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({});
@@ -56,7 +60,7 @@ export default function TabInvoicesList() {
       paidAmount: inv.paidAmount ?? inv.totalAmount,
       remainingAmount: inv.remainingAmount ?? 0,
       paymentMethod: inv.paymentMethod || 'Chuyển khoản',
-      note: inv.note || ''
+      note: inv.notes || inv.note || ''
     });
     setEditModalOpen(true);
   };
@@ -434,13 +438,14 @@ export default function TabInvoicesList() {
                 {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Tổng tiền</th>}
                 {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Đã thanh toán</th>}
                 {showFinance && <th className="py-3.5 px-4 font-bold text-gray-800 text-right">Còn lại</th>}
+                <th className="py-3.5 px-4 font-bold text-gray-800">Ghi chú</th>
                 <th className="py-3.5 pr-6 pl-4 text-center font-bold text-gray-800 w-24">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {paginatedInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={showFinance ? 11 : 8} className="py-12 text-center text-gray-400">
+                  <td colSpan={showFinance ? 12 : 9} className="py-12 text-center text-gray-400">
                     Không tìm thấy hóa đơn nào phù hợp.
                   </td>
                 </tr>
@@ -471,7 +476,19 @@ export default function TabInvoicesList() {
                         </button>
                       </td>
                       <td className="py-3.5 px-4 text-gray-600">{inv.date}</td>
-                      <td className="py-3.5 px-4 font-semibold text-gray-900">{inv.customerName}</td>
+                      <td className="py-3.5 px-4 font-semibold text-gray-900">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentModalInvoice(inv)}
+                          className="text-left font-semibold text-gray-900 hover:text-[#E60026] group inline-flex items-center gap-1.5 transition-colors"
+                          title="Bấm để xem lịch sử thanh toán & Thêm đợt thanh toán"
+                        >
+                          <span className="group-hover:underline underline-offset-2">{inv.customerName}</span>
+                          <span className="text-[10px] bg-rose-50 text-[#E60026] px-1.5 py-0.5 rounded font-medium opacity-80 group-hover:opacity-100 border border-rose-100 whitespace-nowrap">
+                            Đợt trả
+                          </span>
+                        </button>
+                      </td>
                       <td className="py-3.5 px-4 font-sans text-gray-700">{inv.customerPhone}</td>
                       <td className="py-3.5 px-4 text-gray-700 max-w-[200px] truncate" title={inv.serviceSummary}>{inv.serviceSummary}</td>
                       {/* Tổng tiền - chỉ Chủ */}
@@ -507,6 +524,17 @@ export default function TabInvoicesList() {
                         })()}
                       </td>
                       )}
+
+                      {/* Cột Ghi chú */}
+                      <td className="py-3.5 px-4 text-xs text-gray-600 max-w-[180px]">
+                        {inv.notes || inv.note ? (
+                          <span className="bg-gray-50 border border-gray-200/80 px-2 py-0.5 rounded-md inline-block max-w-[170px] truncate text-gray-700" title={inv.notes || inv.note}>
+                            {inv.notes || inv.note}
+                          </span>
+                        ) : (
+                          <span className="text-gray-300 italic">—</span>
+                        )}
+                      </td>
                       <td className="py-3.5 pr-6 pl-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {/* Xem chi tiết */}
@@ -758,6 +786,14 @@ export default function TabInvoicesList() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal Quản lý đợt thanh toán khi bấm vào tên khách hàng */}
+      {paymentModalInvoice && (
+        <PaymentInstallmentsModal
+          invoice={paymentModalInvoice}
+          onClose={() => setPaymentModalInvoice(null)}
+        />
       )}
     </div>
   );

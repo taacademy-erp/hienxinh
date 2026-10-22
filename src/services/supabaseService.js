@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase.js';
 
 // ==============================================================================
 // FIELD NORMALIZERS (Chuyển đổi giữa snake_case của SQL và camelCase của UI)
@@ -25,6 +25,40 @@ export const normalizeCustomer = (c) => {
 
 export const normalizeInvoice = (inv) => {
   if (!inv) return null;
+
+  let rawNotes = inv.notes ?? inv.note ?? '';
+  let payments = Array.isArray(inv.payments) ? inv.payments : [];
+
+  // Trích xuất mảng đợt thanh toán từ chuỗi ghi chú nếu có
+  if (payments.length === 0 && typeof rawNotes === 'string') {
+    const paymentMatch = rawNotes.match(/<!--PAYMENTS:(.*?)-->/);
+    if (paymentMatch) {
+      try {
+        payments = JSON.parse(paymentMatch[1]);
+        rawNotes = rawNotes.replace(/<!--PAYMENTS:.*?-->/, '').trim();
+      } catch (e) {}
+    }
+  }
+
+  const tot = Number(inv.total_amount ?? inv.totalAmount ?? 0);
+  const paid = Number(inv.paid_amount ?? inv.paidAmount ?? tot);
+  const rem = Number(inv.remaining_amount ?? inv.remainingAmount ?? Math.max(0, tot - paid));
+
+  // Nếu hóa đơn có số tiền đã trả nhưng chưa có mảng đợt thanh toán -> khởi tạo đợt 1 mặc định
+  if (payments.length === 0 && paid > 0) {
+    payments = [
+      {
+        id: 1,
+        date: inv.date || new Date().toLocaleDateString('vi-VN'),
+        time: 'Ban đầu',
+        amount: paid,
+        paymentMethod: inv.payment_method ?? inv.paymentMethod ?? 'Chuyển khoản',
+        bankAccount: inv.bank_account ?? inv.bankAccount ?? '',
+        note: 'Thanh toán đợt 1 khi lập hóa đơn'
+      }
+    ];
+  }
+
   return {
     id: inv.id,
     code: inv.code,
@@ -39,13 +73,15 @@ export const normalizeInvoice = (inv) => {
     serviceSummary: inv.service_summary ?? inv.serviceSummary ?? '',
     subtotal: Number(inv.subtotal ?? 0),
     discount: Number(inv.discount ?? 0),
-    totalAmount: Number(inv.total_amount ?? inv.totalAmount ?? 0),
-    paidAmount: Number(inv.paid_amount ?? inv.paidAmount ?? (inv.total_amount ?? inv.totalAmount ?? 0)),
-    remainingAmount: Number(inv.remaining_amount ?? inv.remainingAmount ?? 0),
+    totalAmount: tot,
+    paidAmount: paid,
+    remainingAmount: rem,
     paymentMethod: inv.payment_method ?? inv.paymentMethod ?? 'Chuyển khoản',
     bankAccount: inv.bank_account ?? inv.bankAccount ?? '',
-    notes: inv.notes ?? '',
-    status: inv.status ?? 'Đã thanh toán',
+    notes: rawNotes,
+    note: rawNotes,
+    payments,
+    status: inv.status ?? (rem === 0 ? 'Đã thanh toán' : (paid > 0 ? 'Còn nợ' : 'Chưa thanh toán')),
     createdBy: inv.created_by ?? inv.createdBy ?? '',
     createdAt: inv.created_at || inv.createdAt || new Date().toISOString()
   };
@@ -229,6 +265,12 @@ export const supabaseService = {
   },
 
   async addInvoice(inv) {
+    let notePayload = inv.notes || inv.note || '';
+    if (Array.isArray(inv.payments) && inv.payments.length > 0) {
+      const cleanNote = notePayload.replace(/<!--PAYMENTS:.*?-->/, '').trim();
+      notePayload = (cleanNote ? cleanNote + '\n' : '') + `<!--PAYMENTS:${JSON.stringify(inv.payments)}-->`;
+    }
+
     // Payload đầy đủ (yêu cầu bảng có đủ cột theo supabase-migration.sql)
     const fullPayload = {
       code:             inv.code,
@@ -248,7 +290,7 @@ export const supabaseService = {
       remaining_amount: Number(inv.remainingAmount ?? 0),
       payment_method:   inv.paymentMethod || 'Chuyển khoản',
       bank_account:     inv.bankAccount || '',
-      notes:            inv.notes || inv.note || '',
+      notes:            notePayload,
       status:           inv.status || 'Đã thanh toán',
       created_by:       inv.createdBy || ''
     };
@@ -314,7 +356,15 @@ export const supabaseService = {
       if (updates.remainingAmount !== undefined) payload.remaining_amount = Number(updates.remainingAmount);
       if (updates.paymentMethod !== undefined) payload.payment_method = updates.paymentMethod;
       if (updates.bankAccount !== undefined) payload.bank_account = updates.bankAccount;
-      if (updates.notes !== undefined || updates.note !== undefined) payload.notes = updates.notes || updates.note;
+      
+      let noteStr = updates.notes !== undefined ? updates.notes : (updates.note !== undefined ? updates.note : undefined);
+      if (updates.payments !== undefined) {
+        const cleanNote = (noteStr !== undefined ? noteStr : '').replace(/<!--PAYMENTS:.*?-->/, '').trim();
+        payload.notes = (cleanNote ? cleanNote + '\n' : '') + `<!--PAYMENTS:${JSON.stringify(updates.payments)}-->`;
+      } else if (noteStr !== undefined) {
+        payload.notes = noteStr;
+      }
+
       if (updates.date !== undefined) payload.date = updates.date;
       if (updates.status !== undefined) payload.status = updates.status;
 

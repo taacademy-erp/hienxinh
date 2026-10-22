@@ -410,6 +410,18 @@ export const AppProvider = ({ children }) => {
     const rem = invoiceData.remainingAmount !== undefined ? Number(invoiceData.remainingAmount) : Math.max(0, tot - paid);
     const status = invoiceData.status || (rem === 0 ? 'Đã thanh toán' : (paid > 0 ? 'Còn nợ' : 'Chưa thanh toán'));
 
+    const initialPayments = (invoiceData.payments && invoiceData.payments.length > 0)
+      ? invoiceData.payments
+      : (paid > 0 ? [{
+          id: 1,
+          date: newDate,
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          amount: paid,
+          paymentMethod: invoiceData.paymentMethod || 'Chuyển khoản',
+          bankAccount: invoiceData.bankAccount || '',
+          note: 'Thanh toán đợt 1 khi lập hóa đơn'
+        }] : []);
+
     const fullInv = {
       ...invoiceData,
       code: newCode,
@@ -419,6 +431,7 @@ export const AppProvider = ({ children }) => {
       remainingAmount: rem,
       status,
       notes: invoiceData.notes || invoiceData.note || '',
+      payments: initialPayments,
       serviceSummary: invoiceData.serviceSummary || (invoiceData.services || []).map(s => s.name).join(', ')
     };
 
@@ -552,6 +565,100 @@ export const AppProvider = ({ children }) => {
       console.warn('Supabase updateInvoice error:', e);
     }
     addToast('Cập nhật hóa đơn thành công trên Supabase!', 'success');
+  };
+
+  // Thêm đợt thanh toán cho hóa đơn (Installment payment)
+  const addPaymentInstallment = async (invoiceId, paymentData) => {
+    const targetInv = invoices.find(inv => inv.id === invoiceId);
+    if (!targetInv) return null;
+
+    const installmentAmount = Number(paymentData.amount) || 0;
+    if (installmentAmount <= 0) {
+      addToast('Vui lòng nhập số tiền nhận hợp lệ!', 'error');
+      return null;
+    }
+
+    const currentPayments = Array.isArray(targetInv.payments) ? [...targetInv.payments] : [];
+    const newInstallment = {
+      id: Date.now(),
+      date: paymentData.date || new Date().toLocaleDateString('vi-VN'),
+      time: paymentData.time || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      amount: installmentAmount,
+      paymentMethod: paymentData.paymentMethod || 'Chuyển khoản',
+      bankAccount: paymentData.bankAccount || 'Vietcombank Spa',
+      note: paymentData.note || `Đợt ${currentPayments.length + 1}`
+    };
+
+    const updatedPayments = [...currentPayments, newInstallment];
+    const newPaidAmount = updatedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const tot = Number(targetInv.totalAmount) || 0;
+    const newRemainingAmount = Math.max(0, tot - newPaidAmount);
+    const newStatus = newRemainingAmount === 0 ? 'Đã thanh toán' : (newPaidAmount > 0 ? 'Còn nợ' : 'Chưa thanh toán');
+
+    const updates = {
+      paidAmount: newPaidAmount,
+      remainingAmount: newRemainingAmount,
+      status: newStatus,
+      payments: updatedPayments,
+      notes: targetInv.notes || targetInv.note || ''
+    };
+
+    // 1. Cập nhật state in-memory ngay lập tức
+    const updatedInvObj = { ...targetInv, ...updates };
+    setInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvObj : inv));
+
+    // 2. Cập nhật Supabase
+    try {
+      await supabaseService.updateInvoice(invoiceId, updates);
+
+      // Ghi nhận vào sổ quỹ giao dịch
+      await supabaseService.addDailyTransaction({
+        date: newInstallment.date,
+        type: 'income',
+        amount: installmentAmount,
+        content: `Thu tiền đợt ${updatedPayments.length} - ${targetInv.code} (${targetInv.customerName})`,
+        referenceCode: targetInv.code,
+        accountName: newInstallment.bankAccount || newInstallment.paymentMethod
+      });
+    } catch (e) {
+      console.warn('Supabase addPaymentInstallment error:', e);
+    }
+
+    addToast(`Đã thu đợt thanh toán: +${Number(installmentAmount).toLocaleString('vi-VN')}đ`, 'success');
+    return updatedInvObj;
+  };
+
+  // Xóa một đợt thanh toán (trong trường hợp nhập nhầm)
+  const deletePaymentInstallment = async (invoiceId, paymentId) => {
+    const targetInv = invoices.find(inv => inv.id === invoiceId);
+    if (!targetInv) return null;
+
+    const currentPayments = Array.isArray(targetInv.payments) ? [...targetInv.payments] : [];
+    const updatedPayments = currentPayments.filter(p => p.id !== paymentId);
+    const newPaidAmount = updatedPayments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const tot = Number(targetInv.totalAmount) || 0;
+    const newRemainingAmount = Math.max(0, tot - newPaidAmount);
+    const newStatus = newRemainingAmount === 0 ? 'Đã thanh toán' : (newPaidAmount > 0 ? 'Còn nợ' : 'Chưa thanh toán');
+
+    const updates = {
+      paidAmount: newPaidAmount,
+      remainingAmount: newRemainingAmount,
+      status: newStatus,
+      payments: updatedPayments,
+      notes: targetInv.notes || targetInv.note || ''
+    };
+
+    const updatedInvObj = { ...targetInv, ...updates };
+    setInvoices(prev => prev.map(inv => inv.id === invoiceId ? updatedInvObj : inv));
+
+    try {
+      await supabaseService.updateInvoice(invoiceId, updates);
+    } catch (e) {
+      console.warn('Supabase deletePaymentInstallment error:', e);
+    }
+
+    addToast('Đã xóa đợt thanh toán và tự động cập nhật lại công nợ!', 'info');
+    return updatedInvObj;
   };
 
   // Add / Edit / Delete Customer (Supabase + Local)
@@ -767,6 +874,8 @@ export const AppProvider = ({ children }) => {
         addInvoice,
         deleteInvoice,
         updateInvoice,
+        addPaymentInstallment,
+        deletePaymentInstallment,
         addCustomer,
         updateCustomer,
         deleteCustomer,

@@ -40,13 +40,22 @@ export default function TabCustomers() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewHistoryCust, setViewHistoryCust] = useState(null);
 
+  // Helper chuẩn hóa 3 nguồn khách hàng theo yêu cầu: Zalo, Facebook, Trực tiếp
+  const normalizeCustSource = (src) => {
+    if (!src) return 'Trực tiếp';
+    const s = src.toLowerCase().trim();
+    if (s.includes('zalo')) return 'Zalo';
+    if (s.includes('fb') || s.includes('facebook') || s.includes('fanpage')) return 'Facebook';
+    return 'Trực tiếp';
+  };
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
     dob: '',
     group: 'Khách mới',
-    source: 'Facebook'
+    source: 'Zalo'
   });
 
   // Filtered customers
@@ -58,7 +67,8 @@ export default function TabCustomers() {
         c.name.toLowerCase().includes(query) ||
         c.phone.replace(/\s+/g, '').includes(query.replace(/\s+/g, ''));
       const matchGroup = selectedGroup === 'Tất cả' || c.group === selectedGroup;
-      const matchSource = selectedSource === 'Tất cả' || c.source === selectedSource;
+      const custSource = normalizeCustSource(c.source);
+      const matchSource = selectedSource === 'Tất cả' || custSource === selectedSource;
       return matchSearch && matchGroup && matchSource;
     });
   }, [customers, search, globalSearchQuery, selectedGroup, selectedSource]);
@@ -96,7 +106,7 @@ export default function TabCustomers() {
       phone: '',
       dob: '',
       group: 'Khách mới',
-      source: 'Facebook'
+      source: 'Zalo'
     });
     setIsModalOpen(true);
   };
@@ -109,7 +119,7 @@ export default function TabCustomers() {
       phone: c.phone,
       dob: c.dob || '',
       group: c.group || 'Khách mới',
-      source: c.source || 'Facebook'
+      source: normalizeCustSource(c.source)
     });
     setIsModalOpen(true);
     setActiveMenuId(null);
@@ -235,15 +245,12 @@ export default function TabCustomers() {
           <select
             value={selectedSource}
             onChange={(e) => { setSelectedSource(e.target.value); setCurrentPage(1); }}
-            className="w-full px-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
+            className="w-full px-3 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-medium"
           >
-            <option value="Tất cả">Tất cả</option>
+            <option value="Tất cả">Tất cả nguồn</option>
+            <option value="Zalo">Zalo</option>
             <option value="Facebook">Facebook</option>
-            <option value="Giới thiệu">Giới thiệu</option>
-            <option value="Tiktok">Tiktok</option>
-            <option value="Website">Website</option>
-            <option value="Khách cũ">Khách cũ</option>
-            <option value="Tại quầy">Tại quầy</option>
+            <option value="Trực tiếp">Trực tiếp</option>
           </select>
         </div>
 
@@ -331,7 +338,15 @@ export default function TabCustomers() {
                       <td className="py-3.5 px-4 text-gray-600">{cust.dob || '—'}</td>
                       <td className="py-3.5 px-4 font-sans text-gray-700">{cust.phone}</td>
                       <td className="py-3.5 px-4">{renderGroupBadge(cust.group)}</td>
-                      <td className="py-3.5 px-4 text-gray-700 font-medium">{cust.source || 'Facebook'}</td>
+                      <td className="py-3.5 px-4 text-gray-700 font-medium">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          normalizeCustSource(cust.source) === 'Zalo' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          normalizeCustSource(cust.source) === 'Facebook' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' :
+                          'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}>
+                          {normalizeCustSource(cust.source)}
+                        </span>
+                      </td>
                       <td className="py-3.5 pr-6 pl-4 text-center">
                         <div className="flex items-center justify-center gap-1">
                           {/* Xem lịch sử - tất cả vai trò */}
@@ -517,12 +532,9 @@ export default function TabCustomers() {
                     onChange={(e) => setFormData({ ...formData, source: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026]"
                   >
+                    <option value="Zalo">Zalo</option>
                     <option value="Facebook">Facebook</option>
-                    <option value="Giới thiệu">Giới thiệu</option>
-                    <option value="Tiktok">Tiktok</option>
-                    <option value="Website">Website</option>
-                    <option value="Khách cũ">Khách cũ</option>
-                    <option value="Tại quầy">Tại quầy</option>
+                    <option value="Trực tiếp">Trực tiếp</option>
                   </select>
                 </div>
               </div>
