@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Settings, ShieldCheck, Sparkles, Building, Plus, Trash2, Edit2, X, Check, User, Users, CreditCard, Building2, Phone, Percent } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
+import CurrencyInput from './CurrencyInput';
 
 export default function TabSettings() {
   const {
@@ -235,11 +236,10 @@ export default function TabSettings() {
                 onChange={(e) => setNewServiceName(e.target.value)}
                 className="flex-1 min-w-[280px] px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500"
               />
-              <input
-                type="text"
+              <CurrencyInput
                 placeholder="Giá niêm yết (VNĐ)"
-                value={formatCurrencyInput(newServicePrice)}
-                onChange={(e) => setNewServicePrice(parseCurrencyInput(e.target.value))}
+                value={newServicePrice}
+                onChange={(val) => setNewServicePrice(val)}
                 className="w-48 px-3.5 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
               />
               <button
@@ -757,11 +757,10 @@ export default function TabSettings() {
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Giá niêm yết (VNĐ) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <CurrencyInput
                   required
-                  value={formatCurrencyInput(editServicePrice)}
-                  onChange={(e) => setEditServicePrice(parseCurrencyInput(e.target.value))}
+                  value={editServicePrice}
+                  onChange={(val) => setEditServicePrice(val)}
                   placeholder="0"
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#E60026] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                 />

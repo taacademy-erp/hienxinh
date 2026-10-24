@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Plus, Trash2, Calendar, CreditCard, Building2, CheckCircle2, AlertCircle, Clock, DollarSign, Wallet } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
+import CurrencyInput from './CurrencyInput';
 
 export default function PaymentInstallmentsModal({ invoice, onClose }) {
   const {
@@ -208,11 +209,10 @@ export default function PaymentInstallmentsModal({ invoice, onClose }) {
                   <label className="block text-xs font-semibold text-gray-700 mb-1">
                     Số tiền nhận (VNĐ) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
+                  <CurrencyInput
                     required
-                    value={formatCurrencyInput(payAmount)}
-                    onChange={(e) => setPayAmount(parseCurrencyInput(e.target.value))}
+                    value={payAmount}
+                    onChange={(val) => setPayAmount(val)}
                     placeholder="0"
                     className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-sans font-bold text-[#E60026] focus:outline-none focus:ring-1 focus:ring-rose-500"
                   />

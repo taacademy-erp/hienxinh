@@ -13,6 +13,7 @@ export default function CurrencyInput({
   className = '',
   required = false,
   readOnly = false,
+  showZero = false,
   ...props
 }) {
   const inputRef = useRef(null);
@@ -27,7 +28,7 @@ export default function CurrencyInput({
 
   // State cục bộ giúp hiển thị mượt mà khi gõ từng ký tự
   const [displayValue, setDisplayValue] = useState(() => {
-    if (value === 0 || value === '0') return '0';
+    if (value === 0 || value === '0') return showZero ? '0' : '';
     return formatNumber(value);
   });
 
@@ -40,12 +41,12 @@ export default function CurrencyInput({
     const incomingNum = Number(value) || 0;
     if (incomingNum !== currentNum || (displayValue === '' && value !== '' && value !== null && value !== undefined)) {
       if (value === 0 || value === '0') {
-        setDisplayValue('0');
+        setDisplayValue(showZero ? '0' : '');
       } else {
         setDisplayValue(formatNumber(value));
       }
     }
-  }, [value]);
+  }, [value, showZero]);
 
   const handleChange = (e) => {
     const rawValue = e.target.value;

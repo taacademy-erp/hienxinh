@@ -17,6 +17,7 @@ import {
   ArrowDownRight,
   Info
 } from 'lucide-react';
+import CalendarDatePicker from './CalendarDatePicker';
 
 /**
  * Match a raw bankAccount string or payment method from invoice/installment
@@ -407,34 +408,29 @@ export default function TabBusinessReport() {
 
         {/* Filter controls */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative">
-            <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Lọc ngày (VD: 22/10/2026)"
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className="pl-9 pr-7 py-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] shadow-2xs"
-            />
-            {dateFilter && (
-              <button
-                onClick={() => setDateFilter('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
-                title="Xóa bộ lọc ngày"
-              >
-                ×
-              </button>
-            )}
-          </div>
+          <CalendarDatePicker
+            value={dateFilter}
+            onChange={(newDate) => setDateFilter(newDate === 'all' ? '' : newDate)}
+            placeholder="Lọc theo ngày..."
+          />
 
           <button
             onClick={() => {
-              const todayStr = new Date().toLocaleDateString('vi-VN');
-              setDateFilter(todayStr);
+              const now = new Date();
+              const d = String(now.getDate()).padStart(2, '0');
+              const m = String(now.getMonth() + 1).padStart(2, '0');
+              setDateFilter(`${d}/${m}/${now.getFullYear()}`);
             }}
-            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all"
+            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all"
           >
             Hôm nay
+          </button>
+
+          <button
+            onClick={() => setDateFilter('')}
+            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all"
+          >
+            Tất cả
           </button>
 
           <button

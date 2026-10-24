@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
+import CurrencyInput from './CurrencyInput';
 
 export default function TabExpenses() {
   const {
@@ -27,9 +28,16 @@ export default function TabExpenses() {
     normalizeRole
   } = useApp();
 
+  const getTodayStr = () => {
+    const now = new Date();
+    const d = String(now.getDate()).padStart(2, '0');
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    return `${d}/${m}/${now.getFullYear()}`;
+  };
+
   // Filters state
   const [timeMode, setTimeMode] = useState('Ngày'); // 'Ngày' | 'Tháng' | 'Tất cả'
-  const [selectedDay, setSelectedDay] = useState('17/10/2026');
+  const [selectedDay, setSelectedDay] = useState(getTodayStr());
   const [selectedMonth, setSelectedMonth] = useState('10/2026');
   const [categoryFilter, setCategoryFilter] = useState('Tất cả');
   const [selectedRows, setSelectedRows] = useState([]);
@@ -42,7 +50,7 @@ export default function TabExpenses() {
 
   // Form state
   const [formData, setFormData] = useState({
-    date: '17/10/2026',
+    date: getTodayStr(),
     content: '',
     category: 'Marketing',
     amount: '',
@@ -383,7 +391,7 @@ export default function TabExpenses() {
             type="button"
             onClick={() => {
               setTimeMode('Ngày');
-              setSelectedDay('17/10/2026');
+              setSelectedDay(getTodayStr());
               setSelectedMonth('10/2026');
               setCategoryFilter('Tất cả');
               setCurrentPage(1);
@@ -653,12 +661,11 @@ export default function TabExpenses() {
                 <label className="block text-xs font-semibold text-gray-700 mb-1">
                   Số tiền chi (VNĐ) <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <CurrencyInput
                   required
-                  value={formatCurrencyInput(formData.amount)}
-                  onChange={(e) => setFormData({ ...formData, amount: parseCurrencyInput(e.target.value) })}
-                  placeholder="1.500.000"
+                  value={formData.amount}
+                  onChange={(val) => setFormData({ ...formData, amount: val })}
+                  placeholder="0"
                   className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#C0001A] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                 />
               </div>

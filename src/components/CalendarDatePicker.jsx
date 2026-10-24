@@ -27,8 +27,9 @@ export default function CalendarDatePicker({
   };
 
   const parsed = parseDate(value);
-  const [viewYear, setViewYear] = useState(parsed ? parsed.year : 2026);
-  const [viewMonth, setViewMonth] = useState(parsed ? parsed.month : 9); // 9 = October
+  const now = new Date();
+  const [viewYear, setViewYear] = useState(parsed ? parsed.year : now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(parsed ? parsed.month : now.getMonth());
 
   // Sync when value changes
   useEffect(() => {
@@ -133,13 +134,12 @@ export default function CalendarDatePicker({
 
   const handleToday = () => {
     const today = new Date();
-    // Default to 18/10/2026 to match system date
-    const dStr = '18';
-    const mStr = '10';
-    const yStr = '2026';
+    const dStr = String(today.getDate()).padStart(2, '0');
+    const mStr = String(today.getMonth() + 1).padStart(2, '0');
+    const yStr = String(today.getFullYear());
     const fullDate = `${dStr}/${mStr}/${yStr}`;
-    setViewYear(2026);
-    setViewMonth(9);
+    setViewYear(today.getFullYear());
+    setViewMonth(today.getMonth());
     onChange(fullDate);
     setIsOpen(false);
   };

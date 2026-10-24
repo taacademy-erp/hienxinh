@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
 import { formatCurrencyInput, parseCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
+import CurrencyInput from './CurrencyInput';
 import PaymentInstallmentsModal from './PaymentInstallmentsModal';
 
 export default function TabInvoicesList() {
@@ -712,25 +713,17 @@ export default function TabInvoicesList() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Tổng tiền</label>
-                  <input
-                    type="text"
-                    value={formatCurrencyInput(editForm.totalAmount)}
-                    onChange={e => {
-                      const val = parseCurrencyInput(e.target.value);
-                      setEditForm({ ...editForm, totalAmount: val });
-                    }}
+                  <CurrencyInput
+                    value={editForm.totalAmount}
+                    onChange={(val) => setEditForm({ ...editForm, totalAmount: val })}
                     className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-[#E60026] focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-700 mb-1">Đã thanh toán</label>
-                  <input
-                    type="text"
-                    value={formatCurrencyInput(editForm.paidAmount)}
-                    onChange={e => {
-                      const val = parseCurrencyInput(e.target.value);
-                      setEditForm({ ...editForm, paidAmount: val });
-                    }}
+                  <CurrencyInput
+                    value={editForm.paidAmount}
+                    onChange={(val) => setEditForm({ ...editForm, paidAmount: val })}
                     className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm font-bold text-emerald-600 focus:outline-none focus:ring-1 focus:ring-rose-500 font-sans"
                   />
                 </div>
