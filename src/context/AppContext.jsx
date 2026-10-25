@@ -16,7 +16,9 @@ const DEFAULT_SERVICES = [
   { id: 'DV12', name: 'Chăm sóc da chuyên sâu', price: 850000, category: 'Chăm sóc da' },
   { id: 'DV13', name: 'Triệt lông nách / Vĩnh viễn', price: 1300000, category: 'Triệt lông vĩnh viễn' },
   { id: 'DV14', name: 'Laser Pico & Điều trị nám', price: 1500000, category: 'Laser & Điều trị' },
-  { id: 'DV15', name: 'Tiêm thẩm mỹ Filler môi/Botox', price: 2800000, category: 'Tiêm thẩm mỹ (Filler/Botox)' }
+  { id: 'DV15', name: 'Tiêm thẩm mỹ Filler môi/Botox', price: 2800000, category: 'Tiêm thẩm mỹ (Filler/Botox)' },
+  { id: 'DV16', name: 'Sản phẩm Kem chống nắng Anessa', price: 550000, category: 'Sản phẩm mỹ phẩm' },
+  { id: 'DV17', name: 'Sản phẩm Serum B5 phục hồi da', price: 450000, category: 'Sản phẩm mỹ phẩm' }
 ];
 
 const DEFAULT_STAFF = [

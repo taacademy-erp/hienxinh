@@ -114,6 +114,7 @@ export default function TabInvoicesList() {
   const [selectedRows, setSelectedRows] = useState([]);
   const [pageSize, setPageSize] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterDebtOnly, setFilterDebtOnly] = useState(false);
 
   // Extract available months and days from invoices
   const { availableMonths, availableDays } = useMemo(() => {
@@ -179,6 +180,14 @@ export default function TabInvoicesList() {
   // Filtered invoices
   const filteredInvoices = useMemo(() => {
     return (invoices || []).filter(inv => {
+      const total = Number(inv.totalAmount) || 0;
+      const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
+      const remaining = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
+
+      if (filterDebtOnly && remaining <= 0) {
+        return false;
+      }
+
       const q = search.toLowerCase().trim();
       const matchSearch =
         !q ||
@@ -197,7 +206,7 @@ export default function TabInvoicesList() {
 
       return matchSearch && matchService && matchDate;
     });
-  }, [invoices, search, selectedService, timeMode, selectedDay, selectedMonth]);
+  }, [invoices, search, selectedService, timeMode, selectedDay, selectedMonth, filterDebtOnly]);
 
   // Pagination
   const totalItems = filteredInvoices.length;
@@ -239,7 +248,21 @@ export default function TabInvoicesList() {
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
         {/* 3 ô tổng hợp - Chủ & Quản lý đều thấy */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-gray-100">
-          <div className="flex items-center gap-3.5 p-3.5 bg-rose-50/50 rounded-xl border border-rose-100">
+          {/* Card 1: Số Hóa Đơn trong ngày */}
+          <div
+            onClick={() => {
+              setFilterDebtOnly(false);
+              setTimeMode('day');
+              setSelectedDay(todayStr);
+              setCurrentPage(1);
+            }}
+            className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+              !filterDebtOnly && timeMode === 'day' && selectedDay === todayStr
+                ? 'bg-rose-100/80 border-[#E60026] ring-2 ring-rose-400 shadow-xs'
+                : 'bg-rose-50/50 border-rose-100 hover:bg-rose-100/60'
+            }`}
+            title="Bấm để xem hóa đơn hôm nay"
+          >
             <div className="w-10 h-10 rounded-xl bg-[#E60026] text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-500/20">
               <FileText className="w-5 h-5" />
             </div>
@@ -253,21 +276,71 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 p-3.5 bg-amber-50/50 rounded-xl border border-amber-100">
-            <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/20">
+          {/* Card 2: Số khách hàng còn nợ (Bấm vào để lọc đầy đủ hóa đơn còn nợ) */}
+          <div
+            onClick={() => {
+              setFilterDebtOnly(prev => {
+                const next = !prev;
+                if (next) {
+                  setTimeMode('all');
+                  setSelectedDay('all');
+                  setSelectedMonth('all');
+                  setCurrentPage(1);
+                }
+                return next;
+              });
+            }}
+            className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+              filterDebtOnly
+                ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400 shadow-md scale-[1.02]'
+                : 'bg-amber-50/50 border-amber-100 hover:bg-amber-100/70 hover:border-amber-300'
+            }`}
+            title={filterDebtOnly ? 'Bấm để hủy lọc nợ (Xem tất cả)' : 'Bấm để xem danh sách đầy đủ hóa đơn khách hàng còn nợ'}
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all ${
+              filterDebtOnly ? 'bg-amber-600 text-white shadow-amber-600/30' : 'bg-amber-500 text-white shadow-amber-500/20'
+            }`}>
               <Users className="w-5 h-5" />
             </div>
             <div>
-              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                Số khách hàng còn nợ
+              <div className="flex items-center gap-1.5">
+                <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">
+                  Số khách hàng còn nợ
+                </span>
+                {filterDebtOnly && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-600 text-white shadow-2xs">
+                    Đang lọc
+                  </span>
+                )}
               </div>
-              <div className="text-xl font-black text-amber-600 font-sans mt-0.5">
-                {debtStats.debtCustomersCount} <span className="text-xs font-normal text-gray-500">khách hàng</span>
+              <div className="text-xl font-black text-amber-600 font-sans mt-0.5 flex items-center gap-2">
+                <span>{debtStats.debtCustomersCount}</span>
+                <span className="text-xs font-normal text-gray-500">khách hàng</span>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-3.5 p-3.5 bg-red-50/50 rounded-xl border border-red-100">
+          {/* Card 3: Số tiền cần thu */}
+          <div
+            onClick={() => {
+              setFilterDebtOnly(prev => {
+                const next = !prev;
+                if (next) {
+                  setTimeMode('all');
+                  setSelectedDay('all');
+                  setSelectedMonth('all');
+                  setCurrentPage(1);
+                }
+                return next;
+              });
+            }}
+            className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+              filterDebtOnly
+                ? 'bg-red-100 border-[#E60026] ring-2 ring-red-400 shadow-md scale-[1.02]'
+                : 'bg-red-50/50 border-red-100 hover:bg-red-100/70 hover:border-red-300'
+            }`}
+            title={filterDebtOnly ? 'Bấm để hủy lọc nợ' : 'Bấm để xem toàn bộ hóa đơn khách hàng còn nợ'}
+          >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
               <Coins className="w-5 h-5" />
             </div>
@@ -281,6 +354,26 @@ export default function TabInvoicesList() {
             </div>
           </div>
         </div>
+
+        {/* Thông báo banner khi đang lọc danh sách khách hàng còn nợ */}
+        {filterDebtOnly && (
+          <div className="p-3 bg-amber-50 border border-amber-300 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs animate-in fade-in duration-200">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0">
+                <Users className="w-3.5 h-3.5" />
+              </div>
+              <span className="text-gray-800">
+                Đang hiển thị danh sách <strong>{filteredInvoices.length} hóa đơn khách hàng còn nợ</strong> (Tổng công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
+              </span>
+            </div>
+            <button
+              onClick={() => setFilterDebtOnly(false)}
+              className="px-3 py-1 bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all shadow-2xs"
+            >
+              Hủy lọc nợ (Xem tất cả)
+            </button>
+          </div>
+        )}
 
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-3">

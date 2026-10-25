@@ -88,33 +88,43 @@ export default function InvoiceDetailModal() {
 
           {/* Table of Services */}
           <div>
-            <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">Chi tiết dịch vụ đăng ký</h4>
+            <h4 className="text-xs font-bold text-gray-700 uppercase mb-2">Chi tiết dịch vụ / sản phẩm đăng ký</h4>
             <table className="w-full text-left text-xs border border-gray-200 rounded-xl overflow-hidden">
               <thead className="bg-gray-100 text-gray-700 font-semibold">
                 <tr>
                   <th className="py-2.5 px-3">#</th>
-                  <th className="py-2.5 px-3">Dịch vụ</th>
+                  <th className="py-2.5 px-3">Dịch vụ / Sản phẩm</th>
+                  <th className="py-2.5 px-3 text-center">Số lượng</th>
                   <th className="py-2.5 px-3 text-right">Giá niêm yết</th>
-                  <th className="py-2.5 px-3 text-right">Giá khuyến mãi</th>
+                  <th className="py-2.5 px-3 text-right">Khuyến mãi</th>
                   <th className="py-2.5 px-3 text-right">Thành tiền</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {(selectedInvoice.services || []).map((s, i) => (
-                  <tr key={i}>
-                    <td className="py-2.5 px-3 text-gray-500">{i + 1}</td>
-                    <td className="py-2.5 px-3 font-semibold text-gray-900">{s.name}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-700 font-medium">
-                      {formatCurrencyInput(s.listedPrice)} đ
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-medium text-emerald-600">
-                      {Number(s.discountPrice) > 0 ? `- ${formatCurrencyInput(s.discountPrice)} đ` : '0 đ'}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-extrabold text-[#E60026]">
-                      {formatCurrencyInput(s.total ?? Math.max(0, (s.listedPrice || 0) - (s.discountPrice || 0)))} đ
-                    </td>
-                  </tr>
-                ))}
+                {(selectedInvoice.services || []).map((s, i) => {
+                  const qty = s.quantity ?? s.quantityCc ?? 1;
+                  const unitPrice = s.listedPrice ?? s.unitPrice ?? 0;
+                  const discount = Number(s.discountPrice) || 0;
+                  const actTotal = s.total ?? Math.max(0, (unitPrice * qty) - discount);
+                  return (
+                    <tr key={i}>
+                      <td className="py-2.5 px-3 text-gray-500">{i + 1}</td>
+                      <td className="py-2.5 px-3 font-semibold text-gray-900">{s.name}</td>
+                      <td className="py-2.5 px-3 text-center font-bold text-gray-700">
+                        {qty} {s.isFiller ? 'CC' : ''}
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-gray-700 font-medium">
+                        {formatCurrencyInput(unitPrice)} đ
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-medium text-emerald-600">
+                        {discount > 0 ? `- ${formatCurrencyInput(discount)} đ` : '0 đ'}
+                      </td>
+                      <td className="py-2.5 px-3 text-right font-extrabold text-[#E60026]">
+                        {formatCurrencyInput(actTotal)} đ
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
