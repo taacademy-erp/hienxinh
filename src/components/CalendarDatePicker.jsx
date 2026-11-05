@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from 'lucide-react';
+import { normalizeDate, getTodayFormatted } from '../utils/dateUtils';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -134,10 +135,7 @@ export default function CalendarDatePicker({
 
   const handleToday = () => {
     const today = new Date();
-    const dStr = String(today.getDate()).padStart(2, '0');
-    const mStr = String(today.getMonth() + 1).padStart(2, '0');
-    const yStr = String(today.getFullYear());
-    const fullDate = `${dStr}/${mStr}/${yStr}`;
+    const fullDate = getTodayFormatted();
     setViewYear(today.getFullYear());
     setViewMonth(today.getMonth());
     onChange(fullDate);
@@ -201,7 +199,7 @@ export default function CalendarDatePicker({
           <div className="grid grid-cols-7 gap-1 text-center text-xs">
             {calendarCells().map((cell, idx) => {
               const cellDateStr = `${String(cell.day).padStart(2, '0')}/${String(cell.month + 1).padStart(2, '0')}/${cell.year}`;
-              const isSelected = displayVal === cellDateStr;
+              const isSelected = normalizeDate(displayVal) === cellDateStr;
 
               return (
                 <button

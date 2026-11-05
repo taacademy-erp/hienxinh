@@ -14,6 +14,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
+import { isDateMatch, getTodayFormatted } from '../utils/dateUtils';
 
 export default function TabCommissionReport() {
   const {
@@ -26,12 +27,7 @@ export default function TabCommissionReport() {
   } = useApp();
 
   // Helper: Get today's date formatted as DD/MM/YYYY
-  const getTodayStr = () => {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    return `${d}/${m}/${now.getFullYear()}`;
-  };
+  const getTodayStr = () => getTodayFormatted();
 
   const [dateFilter, setDateFilter] = useState(getTodayStr());
   const [timeMode, setTimeMode] = useState('Ngày'); // 'Ngày' | 'Tháng'
@@ -46,16 +42,11 @@ export default function TabCommissionReport() {
     if (timeMode === 'Tháng') {
       const parts = filt.split('/');
       const targetMonthYear = parts.length === 3 ? `${parts[1]}/${parts[2]}` : filt;
-      return (invoices || []).filter(inv => (inv.date || '').includes(targetMonthYear));
+      return (invoices || []).filter(inv => isDateMatch(inv.date, targetMonthYear));
     }
 
-    // Default: 'Ngày' -> Match exact date (e.g. "24/10/2026")
-    return (invoices || []).filter(inv => {
-      const invDate = (inv.date || '').trim();
-      if (invDate === filt) return true;
-      if (filt.length <= 2 && invDate.startsWith(`${filt.padStart(2, '0')}/`)) return true;
-      return false;
-    });
+    // Default: 'Ngày' -> Match date flexibly (handles both 5/11/2026 and 05/11/2026)
+    return (invoices || []).filter(inv => isDateMatch(inv.date, filt));
   }, [invoices, dateFilter, timeMode]);
 
   // Compute commission stats per staff member dynamically from filteredInvoices

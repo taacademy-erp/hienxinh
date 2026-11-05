@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, Plus, Trash2, Calendar, CreditCard, Building2, CheckCircle2, AlertCircle, Clock, DollarSign, Wallet } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
+import { getTodayFormatted } from '../utils/dateUtils';
 import CurrencyInput from './CurrencyInput';
 
 export default function PaymentInstallmentsModal({ invoice, onClose }) {
@@ -28,7 +29,7 @@ export default function PaymentInstallmentsModal({ invoice, onClose }) {
   const payments = Array.isArray(currentInvoice.payments) ? currentInvoice.payments : [];
 
   // Form thêm đợt thanh toán
-  const todayStr = new Date().toLocaleDateString('vi-VN');
+  const todayStr = getTodayFormatted();
   const nowTimeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
   const [payDate, setPayDate] = useState(todayStr);

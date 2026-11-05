@@ -14,6 +14,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
+import { isDateMatch } from '../utils/dateUtils';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 import CurrencyInput from './CurrencyInput';
 
@@ -104,7 +105,7 @@ export default function TabExpenses() {
 
   // Daily statistics
   const dailyExpenses = useMemo(() => {
-    return allExpenses.filter(e => e.date === effectiveDay);
+    return allExpenses.filter(e => isDateMatch(e.date, effectiveDay));
   }, [allExpenses, effectiveDay]);
   const dayTotal = useMemo(() => {
     return dailyExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -112,7 +113,7 @@ export default function TabExpenses() {
 
   // Monthly statistics
   const monthlyExpenses = useMemo(() => {
-    return allExpenses.filter(e => (e.date || '').includes(effectiveMonth));
+    return allExpenses.filter(e => isDateMatch(e.date, effectiveMonth));
   }, [allExpenses, effectiveMonth]);
   const monthTotal = useMemo(() => {
     return monthlyExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0);
@@ -124,9 +125,9 @@ export default function TabExpenses() {
       const matchCat = categoryFilter === 'Tất cả' || (e.category || '').toLowerCase() === categoryFilter.toLowerCase();
       let matchDate = true;
       if (timeMode === 'Ngày' && selectedDay && selectedDay !== 'all') {
-        matchDate = e.date === selectedDay;
+        matchDate = isDateMatch(e.date, selectedDay);
       } else if (timeMode === 'Tháng' && selectedMonth && selectedMonth !== 'all') {
-        matchDate = (e.date || '').includes(selectedMonth);
+        matchDate = isDateMatch(e.date, selectedMonth);
       }
       return matchCat && matchDate;
     });

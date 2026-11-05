@@ -18,6 +18,7 @@ import {
   Info
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
+import { isDateMatch, getTodayFormatted } from '../utils/dateUtils';
 
 /**
  * Match a raw bankAccount string or payment method from invoice/installment
@@ -220,23 +221,20 @@ export default function TabBusinessReport() {
 
   // Filtered receipts by date
   const dateFilteredReceipts = useMemo(() => {
-    if (!dateFilter.trim()) return allReceipts;
-    const filter = dateFilter.trim().toLowerCase();
-    return allReceipts.filter(r => (r.date || '').toLowerCase().includes(filter));
+    if (!dateFilter || !dateFilter.trim()) return allReceipts;
+    return allReceipts.filter(r => isDateMatch(r.date, dateFilter));
   }, [allReceipts, dateFilter]);
 
   // Filtered expenses by date
   const dateFilteredExpenses = useMemo(() => {
-    if (!dateFilter.trim()) return expenses || [];
-    const filter = dateFilter.trim().toLowerCase();
-    return (expenses || []).filter(e => (e.date || '').toLowerCase().includes(filter));
+    if (!dateFilter || !dateFilter.trim()) return expenses || [];
+    return (expenses || []).filter(e => isDateMatch(e.date, dateFilter));
   }, [expenses, dateFilter]);
 
   // Invoices filtered by date (for gross bill & debt context)
   const dateFilteredInvoices = useMemo(() => {
-    if (!dateFilter.trim()) return invoices || [];
-    const filter = dateFilter.trim().toLowerCase();
-    return (invoices || []).filter(inv => (inv.date || '').toLowerCase().includes(filter));
+    if (!dateFilter || !dateFilter.trim()) return invoices || [];
+    return (invoices || []).filter(inv => isDateMatch(inv.date, dateFilter));
   }, [invoices, dateFilter]);
 
   // KEY BUSINESS METRICS
@@ -415,12 +413,7 @@ export default function TabBusinessReport() {
           />
 
           <button
-            onClick={() => {
-              const now = new Date();
-              const d = String(now.getDate()).padStart(2, '0');
-              const m = String(now.getMonth() + 1).padStart(2, '0');
-              setDateFilter(`${d}/${m}/${now.getFullYear()}`);
-            }}
+            onClick={() => setDateFilter(getTodayFormatted())}
             className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all"
           >
             Hôm nay

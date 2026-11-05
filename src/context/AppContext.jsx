@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabaseService } from '../services/supabaseService';
+import { normalizeDate, getTodayFormatted } from '../utils/dateUtils';
 
 const AppContext = createContext();
 
@@ -406,7 +407,7 @@ export const AppProvider = ({ children }) => {
       }
     });
     const newCode = invoiceData.code || ('HD' + String(maxNum + 1).padStart(6, '0'));
-    const newDate = invoiceData.date || new Date().toLocaleDateString('vi-VN');
+    const newDate = invoiceData.date ? normalizeDate(invoiceData.date) : getTodayFormatted();
     const tot = Number(invoiceData.totalAmount) || 0;
     const paid = invoiceData.paidAmount !== undefined ? Number(invoiceData.paidAmount) : tot;
     const rem = invoiceData.remainingAmount !== undefined ? Number(invoiceData.remainingAmount) : Math.max(0, tot - paid);
@@ -583,7 +584,7 @@ export const AppProvider = ({ children }) => {
     const currentPayments = Array.isArray(targetInv.payments) ? [...targetInv.payments] : [];
     const newInstallment = {
       id: Date.now(),
-      date: paymentData.date || new Date().toLocaleDateString('vi-VN'),
+      date: paymentData.date ? normalizeDate(paymentData.date) : getTodayFormatted(),
       time: paymentData.time || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       amount: installmentAmount,
       paymentMethod: paymentData.paymentMethod || 'Chuyển khoản',
@@ -734,6 +735,7 @@ export const AppProvider = ({ children }) => {
     const fullExp = {
       ...expenseData,
       code: newCode,
+      date: expenseData.date ? normalizeDate(expenseData.date) : getTodayFormatted(),
       notes: expenseData.notes || expenseData.note || ''
     };
 

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js';
+import { normalizeDate, getTodayFormatted } from '../utils/dateUtils.js';
 
 // ==============================================================================
 // FIELD NORMALIZERS (Chuyển đổi giữa snake_case của SQL và camelCase của UI)
@@ -40,6 +41,7 @@ export const normalizeInvoice = (inv) => {
     }
   }
 
+  const normDate = normalizeDate(inv.date) || getTodayFormatted();
   const tot = Number(inv.total_amount ?? inv.totalAmount ?? 0);
   const paid = Number(inv.paid_amount ?? inv.paidAmount ?? tot);
   const rem = Number(inv.remaining_amount ?? inv.remainingAmount ?? Math.max(0, tot - paid));
@@ -49,7 +51,7 @@ export const normalizeInvoice = (inv) => {
     payments = [
       {
         id: 1,
-        date: inv.date || new Date().toLocaleDateString('vi-VN'),
+        date: normDate,
         time: 'Ban đầu',
         amount: paid,
         paymentMethod: inv.payment_method ?? inv.paymentMethod ?? 'Chuyển khoản',
@@ -57,12 +59,17 @@ export const normalizeInvoice = (inv) => {
         note: 'Thanh toán đợt 1 khi lập hóa đơn'
       }
     ];
+  } else {
+    payments = payments.map(p => ({
+      ...p,
+      date: normalizeDate(p.date) || normDate
+    }));
   }
 
   return {
     id: inv.id,
     code: inv.code,
-    date: inv.date,
+    date: normDate,
     customerId: inv.customer_id ?? inv.customerId,
     customerName: inv.customer_name ?? inv.customerName,
     customerPhone: inv.customer_phone ?? inv.customerPhone ?? '',
@@ -89,10 +96,11 @@ export const normalizeInvoice = (inv) => {
 
 export const normalizeExpense = (exp) => {
   if (!exp) return null;
+  const normDate = normalizeDate(exp.date) || getTodayFormatted();
   return {
     id: exp.id,
     code: exp.code,
-    date: exp.date,
+    date: normDate,
     amount: Number(exp.amount ?? 0),
     category: exp.category,
     content: exp.content,
@@ -425,7 +433,7 @@ export const supabaseService = {
 
       const payload = {
         code: exp.code || ('CP' + String(Date.now()).slice(-6)),
-        date: exp.date || new Date().toLocaleDateString('vi-VN'),
+        date: exp.date ? normalizeDate(exp.date) : getTodayFormatted(),
         amount: Number(exp.amount ?? 0),
         category: matchedCat,
         content: exp.content || 'Chi phí vận hành',
@@ -693,7 +701,7 @@ export const supabaseService = {
   async addDailyTransaction(tx) {
     try {
       const payload = {
-        date: tx.date,
+        date: tx.date ? normalizeDate(tx.date) : getTodayFormatted(),
         type: tx.type,
         amount: Number(tx.amount || 0),
         content: tx.content,

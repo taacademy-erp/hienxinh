@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import CalendarDatePicker from './CalendarDatePicker';
 import { formatCurrencyInput, parseCurrencyInput, formatVNDWithDot } from '../utils/currencyUtils';
+import { isDateMatch, getTodayFormatted } from '../utils/dateUtils';
 import CurrencyInput from './CurrencyInput';
 import PaymentInstallmentsModal from './PaymentInstallmentsModal';
 
@@ -141,20 +142,14 @@ export default function TabInvoicesList() {
   }, [invoices]);
 
   // Today string formatted as DD/MM/YYYY
-  const todayStr = useMemo(() => {
-    const now = new Date();
-    const d = String(now.getDate()).padStart(2, '0');
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const y = now.getFullYear();
-    return `${d}/${m}/${y}`;
-  }, []);
+  const todayStr = useMemo(() => getTodayFormatted(), []);
 
   // Target date for "Số Hóa Đơn trong ngày"
   const targetDay = (timeMode === 'day' && selectedDay && selectedDay !== 'all') ? selectedDay : todayStr;
 
   // 1. Số Hóa Đơn trong ngày
   const dayInvoicesCount = useMemo(() => {
-    return (invoices || []).filter(inv => inv.date === targetDay || (inv.date || '').startsWith(targetDay)).length;
+    return (invoices || []).filter(inv => isDateMatch(inv.date, targetDay)).length;
   }, [invoices, targetDay]);
 
   // 2. Số khách hàng còn nợ & 3. Số tiền cần thu
@@ -199,9 +194,9 @@ export default function TabInvoicesList() {
       // Date filtering
       let matchDate = true;
       if (timeMode === 'day' && selectedDay && selectedDay !== 'all') {
-        matchDate = inv.date === selectedDay || (inv.date || '').startsWith(selectedDay);
+        matchDate = isDateMatch(inv.date, selectedDay);
       } else if (timeMode === 'month' && selectedMonth && selectedMonth !== 'all') {
-        matchDate = (inv.date || '').includes(selectedMonth);
+        matchDate = isDateMatch(inv.date, selectedMonth);
       }
 
       return matchSearch && matchService && matchDate;
