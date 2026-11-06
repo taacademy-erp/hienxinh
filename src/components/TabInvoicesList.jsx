@@ -117,6 +117,7 @@ export default function TabInvoicesList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterDebtOnly, setFilterDebtOnly] = useState(false);
   const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [debtViewMode, setDebtViewMode] = useState('cards');
   const tableRef = useRef(null);
 
   // Extract available months and days from invoices
@@ -154,9 +155,8 @@ export default function TabInvoicesList() {
     return (invoices || []).filter(inv => isDateMatch(inv.date, targetDay)).length;
   }, [invoices, targetDay]);
 
-  // 2. Số khách hàng còn nợ & 3. Số tiền cần thu
+  // 2. Nhận diện khách hàng nợ trực tiếp dựa trên từng hóa đơn: Hóa đơn nào có số tiền còn lại > 0 là hóa đơn nợ
   const debtStats = useMemo(() => {
-    const debtCustomers = new Set();
     const debtInvoicesList = [];
     let totalDebt = 0;
 
@@ -165,19 +165,19 @@ export default function TabInvoicesList() {
       const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
       const remaining = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
       if (remaining > 0) {
-        // Chuẩn hóa định danh khách hàng: nếu có số điện thoại hợp lệ (>= 7 số) thì dùng SĐT, nếu không thì dùng tên khách hàng
-        const rawPhone = (inv.customerPhone || '').replace(/\D/g, '');
-        const validPhone = rawPhone.length >= 7 ? rawPhone : null;
-        const cleanName = (inv.customerName || '').trim().toLowerCase();
-        const key = validPhone || cleanName || inv.id;
-
-        debtCustomers.add(key);
         totalDebt += remaining;
-        debtInvoicesList.push(inv);
+        debtInvoicesList.push({
+          ...inv,
+          computedTotal: total,
+          computedPaid: paid,
+          computedRemaining: remaining
+        });
       }
     });
+
     return {
-      debtCustomersCount: debtCustomers.size,
+      debtCount: debtInvoicesList.length,
+      debtCustomersCount: debtInvoicesList.length, // Nhận diện trực tiếp theo từng hóa đơn nợ
       debtInvoicesCount: debtInvoicesList.length,
       totalDebtAmount: totalDebt,
       debtInvoicesList
@@ -283,7 +283,7 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
-          {/* Card 2: Số khách hàng còn nợ (Bấm vào để hiện danh sách khách hàng nợ) */}
+          {/* Card 2: Nhận diện khách hàng nợ dựa trên hóa đơn */}
           <div
             onClick={() => {
               setFilterDebtOnly(true);
@@ -298,7 +298,7 @@ export default function TabInvoicesList() {
                 ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400 shadow-md scale-[1.02]'
                 : 'bg-amber-50/50 border-amber-100 hover:bg-amber-100/70 hover:border-amber-300'
             }`}
-            title="Bấm để hiện danh sách các khách hàng nợ"
+            title="Bấm để xem toàn bộ thông tin các hóa đơn nợ bao gồm cả khách hàng"
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all ${
               filterDebtOnly ? 'bg-amber-600 text-white shadow-amber-600/30' : 'bg-amber-500 text-white shadow-amber-500/20'
@@ -317,8 +317,8 @@ export default function TabInvoicesList() {
                 )}
               </div>
               <div className="text-xl font-black text-amber-600 font-sans mt-0.5 flex items-center gap-2">
-                <span>{debtStats.debtCustomersCount}</span>
-                <span className="text-xs font-normal text-gray-500">khách hàng</span>
+                <span>{debtStats.debtInvoicesCount}</span>
+                <span className="text-xs font-normal text-gray-500">khách hàng ({debtStats.debtInvoicesCount} HĐ nợ)</span>
               </div>
             </div>
           </div>
@@ -362,16 +362,16 @@ export default function TabInvoicesList() {
                 <Users className="w-3.5 h-3.5" />
               </div>
               <span className="text-gray-800">
-                Đang hiển thị danh sách <strong>{debtStats.debtCustomersCount} khách hàng còn nợ</strong> ({debtStats.debtInvoicesCount} hóa đơn - Tổng công nợ: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
+                Đang hiển thị danh sách <strong>{debtStats.debtInvoicesCount} hóa đơn khách hàng còn nợ</strong> (Tổng công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
               </span>
             </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsDebtModalOpen(true)}
-                className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-2xs"
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold transition-all shadow-2xs"
               >
-                Mở bảng danh sách nợ
+                Mở chi tiết toàn bộ hóa đơn nợ
               </button>
               <button
                 type="button"
@@ -895,21 +895,21 @@ export default function TabInvoicesList() {
 
       {/* Modal: Danh sách khách hàng còn nợ (Hiện khi bấm vào ô màu vàng) */}
       {isDebtModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl border border-gray-100 max-h-[92vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
                   <Users className="w-5 h-5" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-lg text-gray-900 font-sans">
-                      Danh sách khách hàng còn nợ
+                      Toàn bộ thông tin hóa đơn & khách hàng còn nợ
                     </h3>
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                      {debtStats.debtCustomersCount} khách hàng
+                      {debtStats.debtInvoicesCount} hóa đơn nợ
                     </span>
                   </div>
                   <p className="text-xs text-gray-500 mt-0.5">
@@ -917,93 +917,292 @@ export default function TabInvoicesList() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsDebtModalOpen(false)}
-                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
+
+              {/* View Switcher & Close button */}
+              <div className="flex items-center gap-2 self-end sm:self-center">
+                <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setDebtViewMode('cards')}
+                    className={`px-3 py-1 font-semibold rounded-lg transition-all ${
+                      debtViewMode === 'cards' ? 'bg-amber-600 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Xem chi tiết từng hóa đơn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDebtViewMode('table')}
+                    className={`px-3 py-1 font-semibold rounded-lg transition-all ${
+                      debtViewMode === 'table' ? 'bg-amber-600 text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Xem bảng tổng hợp
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsDebtModalOpen(false)}
+                  className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* Modal Body: Bảng danh sách khách nợ */}
-            <div className="mt-4 overflow-y-auto flex-1 pr-1">
-              <table className="w-full text-left text-sm border-separate border-spacing-y-1.5">
-                <thead>
-                  <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                    <th className="py-2 px-3 w-10 text-center">STT</th>
-                    <th className="py-2 px-3">Mã HD</th>
-                    <th className="py-2 px-3">Ngày lập</th>
-                    <th className="py-2 px-4">Khách hàng</th>
-                    <th className="py-2 px-4">Số điện thoại</th>
-                    <th className="py-2 px-3">Dịch vụ</th>
-                    <th className="py-2 px-4 text-right">Tổng tiền</th>
-                    <th className="py-2 px-4 text-right">Đã trả</th>
-                    <th className="py-2 px-4 text-right text-[#E60026]">Còn nợ</th>
-                    <th className="py-2 px-3 text-center">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debtStats.debtInvoicesList.map((inv, idx) => {
-                    const total = Number(inv.totalAmount) || 0;
-                    const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
-                    const rem = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
-                    return (
-                      <tr key={inv.id} className="bg-amber-50/50 hover:bg-amber-100/70 transition-colors rounded-xl">
-                        <td className="py-3 px-3 text-center font-bold text-gray-500 rounded-l-xl">{idx + 1}</td>
-                        <td className="py-3 px-3">
+            {/* Modal Body: Hiển thị toàn bộ thông tin về hóa đơn đó bao gồm cả khách hàng */}
+            <div className="mt-4 overflow-y-auto flex-1 pr-1 space-y-3.5">
+              {debtViewMode === 'cards' ? (
+                /* CHẾ ĐỘ 1: XEM CHI TIẾT ĐẦY ĐỦ TỪNG HÓA ĐƠN & KHÁCH HÀNG NỢ */
+                debtStats.debtInvoicesList.map((inv, idx) => {
+                  const total = Number(inv.totalAmount) || 0;
+                  const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
+                  const rem = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
+                  const cleanNotes = (inv.notes || inv.note || '').replace(/<!--PAYMENTS:.*?-->/, '').trim();
+
+                  return (
+                    <div
+                      key={inv.id}
+                      className="bg-white border-2 border-amber-200/90 hover:border-amber-400 rounded-2xl p-4 sm:p-5 shadow-xs hover:shadow-md transition-all space-y-3"
+                    >
+                      {/* Top Bar: Mã HD, Ngày lập, Còn nợ & Nút Thu tiền */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-gray-100">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                          <span className="w-7 h-7 rounded-lg bg-amber-500 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                            #{idx + 1}
+                          </span>
                           <button
                             type="button"
                             onClick={() => {
                               setIsDebtModalOpen(false);
                               setSelectedInvoice(inv);
                             }}
-                            className="px-2 py-0.5 rounded text-xs font-bold bg-white text-[#E60026] border border-rose-200 hover:bg-rose-50"
+                            className="px-2.5 py-1 rounded-lg text-xs font-black bg-rose-50 text-[#E60026] hover:bg-rose-100 border border-rose-200 transition-all font-sans"
+                            title="Bấm để xem hóa đơn đầy đủ"
                           >
                             {inv.code}
                           </button>
-                        </td>
-                        <td className="py-3 px-3 text-xs text-gray-600">{inv.date}</td>
-                        <td className="py-3 px-4 font-bold text-gray-900">{inv.customerName}</td>
-                        <td className="py-3 px-4 text-xs font-sans text-gray-700">
-                          {inv.customerPhone && inv.customerPhone !== '0' ? inv.customerPhone : 'Chưa có SĐT'}
-                        </td>
-                        <td className="py-3 px-3 text-xs text-gray-600 max-w-[150px] truncate" title={inv.serviceSummary}>
-                          {inv.serviceSummary || 'Dịch vụ'}
-                        </td>
-                        <td className="py-3 px-4 text-right text-xs font-semibold text-gray-700 font-sans">
-                          {formatCurrencyInput(total)}đ
-                        </td>
-                        <td className="py-3 px-4 text-right text-xs font-semibold text-emerald-600 font-sans">
-                          {formatCurrencyInput(paid)}đ
-                        </td>
-                        <td className="py-3 px-4 text-right font-black text-sm text-[#E60026] font-sans">
-                          {formatCurrencyInput(rem)}đ
-                        </td>
-                        <td className="py-3 px-3 text-center rounded-r-xl">
+                          <span className="text-xs text-gray-500 font-medium flex items-center gap-1 font-sans">
+                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                            Ngày lập: <strong>{inv.date}</strong>
+                          </span>
+                        </div>
+
+                        {/* Số tiền nợ nổi bật & Nút thu tiền */}
+                        <div className="flex items-center gap-3 ml-auto">
+                          <div className="text-right">
+                            <span className="text-[11px] text-gray-400 block font-medium">Số tiền còn nợ:</span>
+                            <span className="text-lg font-black text-[#E60026] font-sans">
+                              {formatCurrencyInput(rem)}đ
+                            </span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => {
                               setIsDebtModalOpen(false);
                               setPaymentModalInvoice(inv);
                             }}
-                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#E60026] hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all whitespace-nowrap"
-                            title="Bấm để thu tiền đợt trả"
+                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E60026] hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm shadow-rose-600/20 transition-all hover:scale-105 active:scale-95"
                           >
+                            <Coins className="w-4 h-4" />
                             <span>Thu tiền</span>
                           </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </div>
+                      </div>
+
+                      {/* Khách hàng & Tài chính tóm tắt */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs bg-amber-50/50 p-3.5 rounded-xl border border-amber-100">
+                        {/* 1. Toàn bộ thông tin khách hàng */}
+                        <div className="space-y-1.5">
+                          <div className="text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span>Thông tin khách hàng:</span>
+                          </div>
+                          <div className="text-base font-black text-gray-900">
+                            {inv.customerName}
+                          </div>
+                          <div className="text-gray-700 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span>
+                              SĐT: <strong className="font-sans font-bold text-gray-900">{inv.customerPhone && inv.customerPhone !== '0' ? inv.customerPhone : 'Chưa có SĐT'}</strong>
+                            </span>
+                            {inv.customerDob && (
+                              <span>
+                                Ngày sinh: <strong className="font-sans font-bold text-gray-900">{inv.customerDob}</strong>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 2. Toàn bộ thông tin công nợ & hình thức thanh toán */}
+                        <div className="space-y-1.5 md:text-right">
+                          <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            Chi tiết tài chính hóa đơn:
+                          </div>
+                          <div className="text-sm font-sans">
+                            <span className="text-gray-600">Tổng hóa đơn:</span> <strong className="font-bold text-gray-900">{formatCurrencyInput(total)}đ</strong>
+                            <span className="mx-2 text-gray-300">|</span>
+                            <span className="text-gray-600">Đã trả:</span> <strong className="font-bold text-emerald-600">{formatCurrencyInput(paid)}đ</strong>
+                          </div>
+                          <div className="text-gray-500 text-[11px]">
+                            Hình thức: <strong>{inv.paymentMethod || 'Chuyển khoản'}</strong>
+                            {inv.bankAccount ? ` • ${inv.bankAccount}` : ''}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3. Chi tiết dịch vụ / sản phẩm của hóa đơn */}
+                      <div className="text-xs space-y-1.5">
+                        <div className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                          <span>Dịch vụ & Sản phẩm đã đăng ký:</span>
+                          <span className="text-gray-400 font-normal">
+                            {Array.isArray(inv.services) ? `${inv.services.length} mục dịch vụ` : ''}
+                          </span>
+                        </div>
+                        {Array.isArray(inv.services) && inv.services.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {inv.services.map((s, sIdx) => {
+                              const qty = s.quantity ?? s.quantityCc ?? 1;
+                              const unitPrice = s.listedPrice ?? s.unitPrice ?? 0;
+                              const discount = Number(s.discountPrice) || 0;
+                              const sTotal = s.total ?? Math.max(0, (unitPrice * qty) - discount);
+
+                              return (
+                                <div key={sIdx} className="p-2.5 bg-gray-50/80 rounded-xl border border-gray-100 flex items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <div className="font-bold text-gray-900 truncate">{s.name}</div>
+                                    <div className="text-[11px] text-gray-500 font-sans">
+                                      {qty > 1 && <span>SL: {qty} {s.isFiller ? 'CC' : ''} • </span>}
+                                      <span>Đơn giá: {formatCurrencyInput(unitPrice)}đ</span>
+                                      {discount > 0 && <span className="text-emerald-600 font-medium"> (-{formatCurrencyInput(discount)}đ)</span>}
+                                    </div>
+                                  </div>
+                                  <span className="font-extrabold text-gray-900 font-sans shrink-0">
+                                    {formatCurrencyInput(sTotal)}đ
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-2.5 bg-gray-50 rounded-xl text-gray-800 font-medium">
+                            {inv.serviceSummary || 'Dịch vụ spa'}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 4. Lịch sử các đợt thanh toán (nếu có) */}
+                      {Array.isArray(inv.payments) && inv.payments.length > 0 && (
+                        <div className="text-xs pt-2.5 border-t border-dashed border-gray-200">
+                          <div className="text-gray-600 text-[11px] font-bold mb-1.5 flex items-center gap-1.5">
+                            <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Lịch sử đã trả ({inv.payments.length} đợt thanh toán):</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {inv.payments.map((p, pIdx) => (
+                              <span
+                                key={pIdx}
+                                className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-lg text-[11px] font-medium font-sans flex items-center gap-1.5"
+                              >
+                                <span className="font-bold">Đợt {pIdx + 1}:</span>
+                                <span className="font-extrabold text-emerald-700">+{formatCurrencyInput(p.amount)}đ</span>
+                                <span className="text-gray-400">({p.date})</span>
+                                {p.bankAccount && <span className="text-gray-500 font-normal">• {p.bankAccount}</span>}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 5. Ghi chú hóa đơn */}
+                      {cleanNotes && (
+                        <div className="text-xs text-gray-600 pt-2 border-t border-gray-100 flex items-center gap-1.5">
+                          <span className="font-bold text-gray-500">Ghi chú:</span>
+                          <span className="italic">{cleanNotes}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                /* CHẾ ĐỘ 2: XEM BẢNG TỔNG HỢP CÔNG NỢ */
+                <table className="w-full text-left text-sm border-separate border-spacing-y-1.5">
+                  <thead>
+                    <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                      <th className="py-2.5 px-3 w-10 text-center">STT</th>
+                      <th className="py-2.5 px-3">Mã HD</th>
+                      <th className="py-2.5 px-3">Ngày lập</th>
+                      <th className="py-2.5 px-4">Họ và tên khách hàng</th>
+                      <th className="py-2.5 px-4">Số điện thoại</th>
+                      <th className="py-2.5 px-3">Dịch vụ / Sản phẩm</th>
+                      <th className="py-2.5 px-4 text-right">Tổng tiền</th>
+                      <th className="py-2.5 px-4 text-right">Đã trả</th>
+                      <th className="py-2.5 px-4 text-right text-[#E60026]">Còn nợ</th>
+                      <th className="py-2.5 px-3 text-center">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {debtStats.debtInvoicesList.map((inv, idx) => {
+                      const total = Number(inv.totalAmount) || 0;
+                      const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
+                      const rem = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
+                      return (
+                        <tr key={inv.id} className="bg-amber-50/50 hover:bg-amber-100/70 transition-colors rounded-xl">
+                          <td className="py-3 px-3 text-center font-bold text-gray-500 rounded-l-xl">{idx + 1}</td>
+                          <td className="py-3 px-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsDebtModalOpen(false);
+                                setSelectedInvoice(inv);
+                              }}
+                              className="px-2 py-0.5 rounded text-xs font-bold bg-white text-[#E60026] border border-rose-200 hover:bg-rose-50"
+                            >
+                              {inv.code}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 text-xs text-gray-600 font-sans">{inv.date}</td>
+                          <td className="py-3 px-4 font-bold text-gray-900">{inv.customerName}</td>
+                          <td className="py-3 px-4 text-xs font-sans text-gray-700">
+                            {inv.customerPhone && inv.customerPhone !== '0' ? inv.customerPhone : 'Chưa có SĐT'}
+                          </td>
+                          <td className="py-3 px-3 text-xs text-gray-600 max-w-[160px] truncate" title={inv.serviceSummary}>
+                            {inv.serviceSummary || 'Dịch vụ'}
+                          </td>
+                          <td className="py-3 px-4 text-right text-xs font-semibold text-gray-700 font-sans">
+                            {formatCurrencyInput(total)}đ
+                          </td>
+                          <td className="py-3 px-4 text-right text-xs font-semibold text-emerald-600 font-sans">
+                            {formatCurrencyInput(paid)}đ
+                          </td>
+                          <td className="py-3 px-4 text-right font-black text-sm text-[#E60026] font-sans">
+                            {formatCurrencyInput(rem)}đ
+                          </td>
+                          <td className="py-3 px-3 text-center rounded-r-xl">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsDebtModalOpen(false);
+                                setPaymentModalInvoice(inv);
+                              }}
+                              className="inline-flex items-center gap-1 px-3 py-1 bg-[#E60026] hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all whitespace-nowrap"
+                              title="Bấm để thu tiền đợt trả"
+                            >
+                              <span>Thu tiền</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             {/* Modal Footer */}
-            <div className="pt-4 border-t border-gray-100 flex items-center justify-between shrink-0">
-              <span className="text-xs text-gray-500">
-                Hiển thị đầy đủ <strong>{debtStats.debtCustomersCount}</strong> khách hàng còn nợ
+            <div className="pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-gray-600">
+                Hiển thị đầy đủ <strong>{debtStats.debtInvoicesCount}</strong> hóa đơn nợ (Tổng công nợ: <strong className="text-[#E60026] font-sans">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
               </span>
               <div className="flex items-center gap-2">
                 <button
