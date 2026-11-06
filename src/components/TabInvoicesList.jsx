@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   Search,
@@ -116,6 +116,8 @@ export default function TabInvoicesList() {
   const [pageSize, setPageSize] = useState(8);
   const [currentPage, setCurrentPage] = useState(1);
   const [filterDebtOnly, setFilterDebtOnly] = useState(false);
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const tableRef = useRef(null);
 
   // Extract available months and days from invoices
   const { availableMonths, availableDays } = useMemo(() => {
@@ -155,20 +157,30 @@ export default function TabInvoicesList() {
   // 2. Số khách hàng còn nợ & 3. Số tiền cần thu
   const debtStats = useMemo(() => {
     const debtCustomers = new Set();
+    const debtInvoicesList = [];
     let totalDebt = 0;
+
     (invoices || []).forEach(inv => {
       const total = Number(inv.totalAmount) || 0;
       const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
       const remaining = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
       if (remaining > 0) {
-        const key = (inv.customerPhone || '').trim() || (inv.customerName || '').trim() || inv.id;
+        // Chuẩn hóa định danh khách hàng: nếu có số điện thoại hợp lệ (>= 7 số) thì dùng SĐT, nếu không thì dùng tên khách hàng
+        const rawPhone = (inv.customerPhone || '').replace(/\D/g, '');
+        const validPhone = rawPhone.length >= 7 ? rawPhone : null;
+        const cleanName = (inv.customerName || '').trim().toLowerCase();
+        const key = validPhone || cleanName || inv.id;
+
         debtCustomers.add(key);
         totalDebt += remaining;
+        debtInvoicesList.push(inv);
       }
     });
     return {
       debtCustomersCount: debtCustomers.size,
-      totalDebtAmount: totalDebt
+      debtInvoicesCount: debtInvoicesList.length,
+      totalDebtAmount: totalDebt,
+      debtInvoicesList
     };
   }, [invoices]);
 
@@ -271,26 +283,22 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
-          {/* Card 2: Số khách hàng còn nợ (Bấm vào để lọc đầy đủ hóa đơn còn nợ) */}
+          {/* Card 2: Số khách hàng còn nợ (Bấm vào để hiện danh sách khách hàng nợ) */}
           <div
             onClick={() => {
-              setFilterDebtOnly(prev => {
-                const next = !prev;
-                if (next) {
-                  setTimeMode('all');
-                  setSelectedDay('all');
-                  setSelectedMonth('all');
-                  setCurrentPage(1);
-                }
-                return next;
-              });
+              setFilterDebtOnly(true);
+              setTimeMode('all');
+              setSelectedDay('all');
+              setSelectedMonth('all');
+              setCurrentPage(1);
+              setIsDebtModalOpen(true);
             }}
             className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
               filterDebtOnly
                 ? 'bg-amber-100 border-amber-500 ring-2 ring-amber-400 shadow-md scale-[1.02]'
                 : 'bg-amber-50/50 border-amber-100 hover:bg-amber-100/70 hover:border-amber-300'
             }`}
-            title={filterDebtOnly ? 'Bấm để hủy lọc nợ (Xem tất cả)' : 'Bấm để xem danh sách đầy đủ hóa đơn khách hàng còn nợ'}
+            title="Bấm để hiện danh sách các khách hàng nợ"
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-all ${
               filterDebtOnly ? 'bg-amber-600 text-white shadow-amber-600/30' : 'bg-amber-500 text-white shadow-amber-500/20'
@@ -318,23 +326,19 @@ export default function TabInvoicesList() {
           {/* Card 3: Số tiền cần thu */}
           <div
             onClick={() => {
-              setFilterDebtOnly(prev => {
-                const next = !prev;
-                if (next) {
-                  setTimeMode('all');
-                  setSelectedDay('all');
-                  setSelectedMonth('all');
-                  setCurrentPage(1);
-                }
-                return next;
-              });
+              setFilterDebtOnly(true);
+              setTimeMode('all');
+              setSelectedDay('all');
+              setSelectedMonth('all');
+              setCurrentPage(1);
+              setIsDebtModalOpen(true);
             }}
             className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
               filterDebtOnly
                 ? 'bg-red-100 border-[#E60026] ring-2 ring-red-400 shadow-md scale-[1.02]'
                 : 'bg-red-50/50 border-red-100 hover:bg-red-100/70 hover:border-red-300'
             }`}
-            title={filterDebtOnly ? 'Bấm để hủy lọc nợ' : 'Bấm để xem toàn bộ hóa đơn khách hàng còn nợ'}
+            title="Bấm để hiện danh sách các khách hàng nợ"
           >
             <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
               <Coins className="w-5 h-5" />
@@ -358,15 +362,25 @@ export default function TabInvoicesList() {
                 <Users className="w-3.5 h-3.5" />
               </div>
               <span className="text-gray-800">
-                Đang hiển thị danh sách <strong>{filteredInvoices.length} hóa đơn khách hàng còn nợ</strong> (Tổng công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
+                Đang hiển thị danh sách <strong>{debtStats.debtCustomersCount} khách hàng còn nợ</strong> ({debtStats.debtInvoicesCount} hóa đơn - Tổng công nợ: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
               </span>
             </div>
-            <button
-              onClick={() => setFilterDebtOnly(false)}
-              className="px-3 py-1 bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all shadow-2xs"
-            >
-              Hủy lọc nợ (Xem tất cả)
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsDebtModalOpen(true)}
+                className="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-xs font-bold transition-all shadow-2xs"
+              >
+                Mở bảng danh sách nợ
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterDebtOnly(false)}
+                className="px-3 py-1 bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 rounded-lg text-xs font-bold transition-all shadow-2xs"
+              >
+                Hủy lọc nợ (Xem tất cả)
+              </button>
+            </div>
           </div>
         )}
 
@@ -492,7 +506,7 @@ export default function TabInvoicesList() {
       </div>
 
       {/* Invoice Table Card */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div ref={tableRef} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         {/* Card Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -500,7 +514,9 @@ export default function TabInvoicesList() {
               ≡
             </div>
             <h2 className="font-bold text-gray-900 text-base">
-              <span className="text-[#E60026]">Danh sách hóa đơn</span> ({totalItems})
+              <span className="text-[#E60026]">
+                {filterDebtOnly ? 'Danh sách hóa đơn khách hàng còn nợ' : 'Danh sách hóa đơn'}
+              </span> ({totalItems})
             </h2>
           </div>
         </div>
@@ -875,6 +891,142 @@ export default function TabInvoicesList() {
           invoice={paymentModalInvoice}
           onClose={() => setPaymentModalInvoice(null)}
         />
+      )}
+
+      {/* Modal: Danh sách khách hàng còn nợ (Hiện khi bấm vào ô màu vàng) */}
+      {isDebtModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl border border-gray-100 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-lg text-gray-900 font-sans">
+                      Danh sách khách hàng còn nợ
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                      {debtStats.debtCustomersCount} khách hàng
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Tổng số tiền công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold text-sm">{formatCurrencyInput(debtStats.totalDebtAmount)} đ</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDebtModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body: Bảng danh sách khách nợ */}
+            <div className="mt-4 overflow-y-auto flex-1 pr-1">
+              <table className="w-full text-left text-sm border-separate border-spacing-y-1.5">
+                <thead>
+                  <tr className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <th className="py-2 px-3 w-10 text-center">STT</th>
+                    <th className="py-2 px-3">Mã HD</th>
+                    <th className="py-2 px-3">Ngày lập</th>
+                    <th className="py-2 px-4">Khách hàng</th>
+                    <th className="py-2 px-4">Số điện thoại</th>
+                    <th className="py-2 px-3">Dịch vụ</th>
+                    <th className="py-2 px-4 text-right">Tổng tiền</th>
+                    <th className="py-2 px-4 text-right">Đã trả</th>
+                    <th className="py-2 px-4 text-right text-[#E60026]">Còn nợ</th>
+                    <th className="py-2 px-3 text-center">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {debtStats.debtInvoicesList.map((inv, idx) => {
+                    const total = Number(inv.totalAmount) || 0;
+                    const paid = inv.paidAmount !== undefined && inv.paidAmount !== null ? Number(inv.paidAmount) : total;
+                    const rem = inv.remainingAmount !== undefined && inv.remainingAmount !== null ? Number(inv.remainingAmount) : Math.max(0, total - paid);
+                    return (
+                      <tr key={inv.id} className="bg-amber-50/50 hover:bg-amber-100/70 transition-colors rounded-xl">
+                        <td className="py-3 px-3 text-center font-bold text-gray-500 rounded-l-xl">{idx + 1}</td>
+                        <td className="py-3 px-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsDebtModalOpen(false);
+                              setSelectedInvoice(inv);
+                            }}
+                            className="px-2 py-0.5 rounded text-xs font-bold bg-white text-[#E60026] border border-rose-200 hover:bg-rose-50"
+                          >
+                            {inv.code}
+                          </button>
+                        </td>
+                        <td className="py-3 px-3 text-xs text-gray-600">{inv.date}</td>
+                        <td className="py-3 px-4 font-bold text-gray-900">{inv.customerName}</td>
+                        <td className="py-3 px-4 text-xs font-sans text-gray-700">
+                          {inv.customerPhone && inv.customerPhone !== '0' ? inv.customerPhone : 'Chưa có SĐT'}
+                        </td>
+                        <td className="py-3 px-3 text-xs text-gray-600 max-w-[150px] truncate" title={inv.serviceSummary}>
+                          {inv.serviceSummary || 'Dịch vụ'}
+                        </td>
+                        <td className="py-3 px-4 text-right text-xs font-semibold text-gray-700 font-sans">
+                          {formatCurrencyInput(total)}đ
+                        </td>
+                        <td className="py-3 px-4 text-right text-xs font-semibold text-emerald-600 font-sans">
+                          {formatCurrencyInput(paid)}đ
+                        </td>
+                        <td className="py-3 px-4 text-right font-black text-sm text-[#E60026] font-sans">
+                          {formatCurrencyInput(rem)}đ
+                        </td>
+                        <td className="py-3 px-3 text-center rounded-r-xl">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsDebtModalOpen(false);
+                              setPaymentModalInvoice(inv);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1 bg-[#E60026] hover:bg-rose-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-all whitespace-nowrap"
+                            title="Bấm để thu tiền đợt trả"
+                          >
+                            <span>Thu tiền</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between shrink-0">
+              <span className="text-xs text-gray-500">
+                Hiển thị đầy đủ <strong>{debtStats.debtCustomersCount}</strong> khách hàng còn nợ
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsDebtModalOpen(false);
+                    tableRef.current?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs"
+                >
+                  Xem trên bảng chính
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDebtModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-semibold transition-all"
+                >
+                  Đóng
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
