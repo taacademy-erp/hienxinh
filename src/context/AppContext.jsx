@@ -41,7 +41,25 @@ export const AppProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('hienxinh_user');
-      return saved ? JSON.parse(saved) : null;
+      if (!saved) return null;
+      const parsed = JSON.parse(saved);
+      if (parsed) {
+        // Chuẩn hóa tên hiển thị theo yêu cầu:
+        // Chủ -> Hiền Xinh, Quản lý -> Quản Lý, Nhân viên -> Nhân viên
+        const u = (parsed.username || '').toLowerCase();
+        const r = (parsed.role || '').toLowerCase();
+        if (r === 'chu' || u === 'chu' || u === 'admin') {
+          parsed.name = 'Hiền Xinh';
+          parsed.avatar = 'H';
+        } else if (r === 'ql' || u === 'ql' || u === 'quanly') {
+          parsed.name = 'Quản Lý';
+          parsed.avatar = 'Q';
+        } else if (r === 'nhanvien' || u === 'nhanvien' || u === 'nv') {
+          parsed.name = 'Nhân viên';
+          parsed.avatar = 'N';
+        }
+      }
+      return parsed;
     } catch (e) {
       return null;
     }
@@ -129,9 +147,9 @@ export const AppProvider = ({ children }) => {
   // Switch role directly
   const switchRole = (newRole) => {
     const roleProfiles = {
-      chu: { id: 1, username: 'chu', name: 'Hiền Xinh (Chủ)', role: 'chu', avatar: 'H' },
-      ql: { id: 3, username: 'quanly', name: 'Thanh Tú (QL)', role: 'ql', avatar: 'T' },
-      nhanvien: { id: 5, username: 'nhanvien', name: 'Nguyễn Thảo (NV)', role: 'nhanvien', avatar: 'N' }
+      chu: { id: 1, username: 'chu', name: 'Hiền Xinh', role: 'chu', avatar: 'H' },
+      ql: { id: 3, username: 'quanly', name: 'Quản Lý', role: 'ql', avatar: 'Q' },
+      nhanvien: { id: 5, username: 'nhanvien', name: 'Nhân viên', role: 'nhanvien', avatar: 'N' }
     };
     const newProfile = roleProfiles[newRole] || roleProfiles.chu;
     saveUserSession(newProfile);
@@ -193,14 +211,14 @@ export const AppProvider = ({ children }) => {
         let avatar = 'N';
         if (cleanUser.includes('chu') || cleanUser.includes('admin')) {
           matchedRole = 'chu';
-          name = 'Hiền Xinh (Chủ)';
+          name = 'Hiền Xinh';
           avatar = 'H';
         } else if (cleanUser.includes('ql') || cleanUser.includes('quanly')) {
           matchedRole = 'ql';
-          name = 'Thanh Tú (QL)';
-          avatar = 'T';
+          name = 'Quản Lý';
+          avatar = 'Q';
         } else {
-          name = 'Nguyễn Thảo (NV)';
+          name = 'Nhân viên';
           avatar = 'N';
         }
         const localProfile = { id: Date.now(), username: cleanUser, name, role: matchedRole, avatar };
@@ -221,14 +239,14 @@ export const AppProvider = ({ children }) => {
       let avatar = 'N';
       if (cleanUser.includes('chu') || cleanUser.includes('admin')) {
         matchedRole = 'chu';
-        name = 'Hiền Xinh (Chủ)';
+        name = 'Hiền Xinh';
         avatar = 'H';
       } else if (cleanUser.includes('ql') || cleanUser.includes('quanly')) {
         matchedRole = 'ql';
-        name = 'Thanh Tú (QL)';
-        avatar = 'T';
+        name = 'Quản Lý';
+        avatar = 'Q';
       } else {
-        name = 'Nguyễn Thảo (NV)';
+        name = 'Nhân viên';
         avatar = 'N';
       }
       const localProfile = { id: Date.now(), username: cleanUser, name, role: matchedRole, avatar };

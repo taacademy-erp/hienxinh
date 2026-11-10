@@ -168,8 +168,8 @@ export default function Header({ onMenuToggle }) {
               {user?.avatar || getRoleInitial(user?.role)}
             </div>
             {/* Hide name on very small screens */}
-            <span className="hidden sm:block text-xs font-semibold text-gray-800 max-w-[80px] truncate">
-              {user?.name?.split(' ').slice(-1)[0] || getRoleDisplayName(user?.role)}
+            <span className="hidden sm:block text-xs font-semibold text-gray-800 max-w-[120px] truncate">
+              {user?.name || getRoleDisplayName(user?.role)}
             </span>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
           </button>
