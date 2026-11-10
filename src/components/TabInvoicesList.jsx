@@ -253,8 +253,8 @@ export default function TabInvoicesList() {
 
       {/* Filter Bar */}
       <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-100 shadow-sm space-y-4">
-        {/* 3 ô tổng hợp - Chủ & Quản lý đều thấy */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pb-3 border-b border-gray-100">
+        {/* 3 ô tổng hợp - Chỉ Chủ mới thấy ô Số tiền cần thu; Quản lý & Nhân viên chỉ thấy 2 ô */}
+        <div className={`grid grid-cols-1 ${showFinance ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3 pb-3 border-b border-gray-100`}>
           {/* Card 1: Số Hóa Đơn trong ngày */}
           <div
             onClick={() => {
@@ -323,35 +323,37 @@ export default function TabInvoicesList() {
             </div>
           </div>
 
-          {/* Card 3: Số tiền cần thu */}
-          <div
-            onClick={() => {
-              setFilterDebtOnly(true);
-              setTimeMode('all');
-              setSelectedDay('all');
-              setSelectedMonth('all');
-              setCurrentPage(1);
-              setIsDebtModalOpen(true);
-            }}
-            className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
-              filterDebtOnly
-                ? 'bg-red-100 border-[#E60026] ring-2 ring-red-400 shadow-md scale-[1.02]'
-                : 'bg-red-50/50 border-red-100 hover:bg-red-100/70 hover:border-red-300'
-            }`}
-            title="Bấm để hiện danh sách các khách hàng nợ"
-          >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
-              <Coins className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                Số tiền cần thu
+          {/* Card 3: Số tiền cần thu - CHỈ TÀI KHOẢN CHỦ MỚI THẤY, ẨN VỚI QUẢN LÝ VÀ NHÂN VIÊN */}
+          {showFinance && (
+            <div
+              onClick={() => {
+                setFilterDebtOnly(true);
+                setTimeMode('all');
+                setSelectedDay('all');
+                setSelectedMonth('all');
+                setCurrentPage(1);
+                setIsDebtModalOpen(true);
+              }}
+              className={`flex items-center gap-3.5 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                filterDebtOnly
+                  ? 'bg-red-100 border-[#E60026] ring-2 ring-red-400 shadow-md scale-[1.02]'
+                  : 'bg-red-50/50 border-red-100 hover:bg-red-100/70 hover:border-red-300'
+              }`}
+              title="Bấm để hiện danh sách các khách hàng nợ"
+            >
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#E60026] to-rose-700 text-white flex items-center justify-center shrink-0 shadow-sm shadow-rose-600/20">
+                <Coins className="w-5 h-5" />
               </div>
-              <div className="text-xl font-black text-[#E60026] font-sans mt-0.5">
-                {formatCurrencyInput(debtStats.totalDebtAmount)} <span className="text-xs font-bold text-[#E60026]">đ</span>
+              <div>
+                <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                  Số tiền cần thu
+                </div>
+                <div className="text-xl font-black text-[#E60026] font-sans mt-0.5">
+                  {formatCurrencyInput(debtStats.totalDebtAmount)} <span className="text-xs font-bold text-[#E60026]">đ</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Thông báo banner khi đang lọc danh sách khách hàng còn nợ */}
@@ -362,7 +364,10 @@ export default function TabInvoicesList() {
                 <Users className="w-3.5 h-3.5" />
               </div>
               <span className="text-gray-800">
-                Đang hiển thị danh sách <strong>{debtStats.debtInvoicesCount} hóa đơn khách hàng còn nợ</strong> (Tổng công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)
+                Đang hiển thị danh sách <strong>{debtStats.debtInvoicesCount} hóa đơn khách hàng còn nợ</strong>
+                {showFinance && (
+                  <> (Tổng công nợ cần thu: <strong className="text-[#E60026] font-sans font-bold">{formatCurrencyInput(debtStats.totalDebtAmount)}đ</strong>)</>
+                )}
               </span>
             </div>
             <div className="flex items-center gap-2">

@@ -143,14 +143,25 @@ export const supabaseService = {
   // 1. AUTH / USERS
   async login(username, password) {
     try {
+      const cleanUser = (username || '').trim();
+      const cleanPass = (password || '').trim();
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .ilike('username', (username || '').trim())
+        .ilike('username', cleanUser)
         .maybeSingle();
 
-      if (error || !data) return null;
-      if (data.password !== password) return null;
+      if (error) {
+        console.warn('Supabase login query error:', error);
+        return null;
+      }
+      if (!data) return null;
+
+      // Người dùng tồn tại nhưng mật khẩu sai -> Trả về lỗi để không fallback vào mật khẩu mặc định 123456
+      if (data.password !== cleanPass) {
+        return { error: 'WRONG_PASSWORD', message: 'Mật khẩu không chính xác' };
+      }
 
       return {
         id: data.id,
@@ -163,6 +174,77 @@ export const supabaseService = {
     } catch (e) {
       console.warn('Supabase login error:', e);
       return null;
+    }
+  },
+
+  async changePassword(identifier, oldPassword, newPassword) {
+    try {
+      const cleanOld = (oldPassword || '').trim();
+      const cleanNew = (newPassword || '').trim();
+
+      if (!cleanNew) {
+        return { success: false, message: 'Mật khẩu mới không được để trống!' };
+      }
+      if (cleanNew.length < 4) {
+        return { success: false, message: 'Mật khẩu mới phải có ít nhất 4 ký tự!' };
+      }
+
+      // 1. Tìm thông tin người dùng theo id hoặc username
+      let query = supabase.from('users').select('*');
+      if (typeof identifier === 'number' || (!isNaN(Number(identifier)) && Number(identifier) > 0)) {
+        query = query.eq('id', Number(identifier));
+      } else {
+        query = query.ilike('username', String(identifier).trim());
+      }
+
+      const { data: userRec, error: fetchErr } = await query.maybeSingle();
+      if (fetchErr || !userRec) {
+        return { success: false, message: 'Không tìm thấy thông tin tài khoản trên Supabase!' };
+      }
+
+      // 2. Xác thực mật khẩu cũ
+      if (userRec.password !== cleanOld) {
+        return { success: false, message: 'Mật khẩu hiện tại không chính xác!' };
+      }
+
+      if (cleanOld === cleanNew) {
+        return { success: false, message: 'Mật khẩu mới không được trùng với mật khẩu hiện tại!' };
+      }
+
+      // 3. Đồng bộ mật khẩu mới cho tài khoản và các alias liên quan (ví dụ chu <-> admin, ql <-> quanly, nv <-> nhanvien)
+      const uname = (userRec.username || '').toLowerCase();
+      const aliasMap = {
+        chu: ['chu', 'admin'],
+        admin: ['chu', 'admin'],
+        ql: ['ql', 'quanly'],
+        quanly: ['ql', 'quanly'],
+        nhanvien: ['nhanvien', 'nv'],
+        nv: ['nhanvien', 'nv']
+      };
+      const targets = aliasMap[uname] || [uname];
+
+      // Cập nhật vào Supabase theo danh sách username tương ứng
+      const { error: updateErr } = await supabase
+        .from('users')
+        .update({ password: cleanNew })
+        .in('username', targets);
+
+      if (updateErr) {
+        // Fallback cập nhật theo id nếu in('username') gặp lỗi
+        const { error: idErr } = await supabase
+          .from('users')
+          .update({ password: cleanNew })
+          .eq('id', userRec.id);
+
+        if (idErr) {
+          return { success: false, message: 'Lỗi cập nhật mật khẩu trên Supabase: ' + idErr.message };
+        }
+      }
+
+      return { success: true, message: 'Đổi mật khẩu thành công trên Supabase!' };
+    } catch (e) {
+      console.error('Supabase changePassword error:', e);
+      return { success: false, message: 'Lỗi hệ thống: ' + (e.message || 'Không thể đổi mật khẩu') };
     }
   },
 

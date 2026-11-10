@@ -144,21 +144,29 @@ export const AppProvider = ({ children }) => {
 
   // Login handler with Supabase support
   const login = async (username, password) => {
-    // 1. Try Supabase Auth/Users table first
-    const sbUser = await supabaseService.login(username, password);
-    if (sbUser) {
-      saveUserSession(sbUser);
-      addToast(`Xin chào ${sbUser.name}! Đăng nhập thành công qua Supabase.`, 'success');
+    const cleanUser = (username || '').toLowerCase().trim();
+    const cleanPass = (password || '').trim();
+
+    // 1. Kiểm tra trực tiếp trên Supabase Auth/Users table trước
+    const sbRes = await supabaseService.login(cleanUser, cleanPass);
+    if (sbRes && !sbRes.error) {
+      saveUserSession(sbRes);
+      addToast(`Xin chào ${sbRes.name}! Đăng nhập thành công qua Supabase.`, 'success');
       setActiveTab('home');
       return true;
     }
+    // Nếu tài khoản tồn tại trên Supabase nhưng mật khẩu không khớp -> Dừng ngay lập tức, không fallback
+    if (sbRes && sbRes.error === 'WRONG_PASSWORD') {
+      addToast('Mật khẩu không chính xác!', 'error');
+      return false;
+    }
 
-    // 2. Fallback to local server API
+    // 2. Fallback to local server API (nếu có server local)
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username: cleanUser, password: cleanPass })
       });
       const data = await res.json();
       if (data.success) {
@@ -169,17 +177,53 @@ export const AppProvider = ({ children }) => {
       }
     } catch (err) {}
 
-    // 3. Fallback to local predefined accounts
-    const u = (username || '').toLowerCase().trim();
-    if (password === '123456') {
+    // 3. Fallback cho chế độ offline với mật khẩu đã lưu hoặc 123456
+    const customPasswords = JSON.parse(localStorage.getItem('spa_user_passwords') || '{}');
+    const savedCustomPass = customPasswords[cleanUser] || (
+      (cleanUser.includes('chu') || cleanUser.includes('admin')) ? (customPasswords['chu'] || customPasswords['admin']) :
+      (cleanUser.includes('ql') || cleanUser.includes('quanly')) ? (customPasswords['ql'] || customPasswords['quanly']) :
+      (customPasswords['nhanvien'] || customPasswords['nv'])
+    );
+
+    // Nếu đã đổi mật khẩu và lưu cục bộ, bắt buộc phải khớp mật khẩu mới
+    if (savedCustomPass) {
+      if (cleanPass === savedCustomPass) {
+        let matchedRole = 'nhanvien';
+        let name = 'Nhân viên';
+        let avatar = 'N';
+        if (cleanUser.includes('chu') || cleanUser.includes('admin')) {
+          matchedRole = 'chu';
+          name = 'Hiền Xinh (Chủ)';
+          avatar = 'H';
+        } else if (cleanUser.includes('ql') || cleanUser.includes('quanly')) {
+          matchedRole = 'ql';
+          name = 'Thanh Tú (QL)';
+          avatar = 'T';
+        } else {
+          name = 'Nguyễn Thảo (NV)';
+          avatar = 'N';
+        }
+        const localProfile = { id: Date.now(), username: cleanUser, name, role: matchedRole, avatar };
+        saveUserSession(localProfile);
+        addToast(`Đăng nhập thành công với vai trò ${matchedRole}!`, 'success');
+        setActiveTab('home');
+        return true;
+      } else {
+        addToast('Mật khẩu không chính xác!', 'error');
+        return false;
+      }
+    }
+
+    // Nếu chưa từng đổi mật khẩu thì kiểm tra mật khẩu mặc định 123456
+    if (cleanPass === '123456') {
       let matchedRole = 'nhanvien';
       let name = 'Nhân viên';
       let avatar = 'N';
-      if (u.includes('chu') || u.includes('admin')) {
+      if (cleanUser.includes('chu') || cleanUser.includes('admin')) {
         matchedRole = 'chu';
         name = 'Hiền Xinh (Chủ)';
         avatar = 'H';
-      } else if (u.includes('ql') || u.includes('quanly')) {
+      } else if (cleanUser.includes('ql') || cleanUser.includes('quanly')) {
         matchedRole = 'ql';
         name = 'Thanh Tú (QL)';
         avatar = 'T';
@@ -187,7 +231,7 @@ export const AppProvider = ({ children }) => {
         name = 'Nguyễn Thảo (NV)';
         avatar = 'N';
       }
-      const localProfile = { id: Date.now(), username, name, role: matchedRole, avatar };
+      const localProfile = { id: Date.now(), username: cleanUser, name, role: matchedRole, avatar };
       saveUserSession(localProfile);
       addToast(`Đăng nhập thành công với vai trò ${matchedRole}!`, 'success');
       setActiveTab('home');
@@ -196,6 +240,75 @@ export const AppProvider = ({ children }) => {
 
     addToast('Tài khoản hoặc mật khẩu không chính xác!', 'error');
     return false;
+  };
+
+  // Change password handler
+  const changePassword = async (oldPassword, newPassword) => {
+    if (!user) {
+      addToast('Bạn chưa đăng nhập!', 'error');
+      return { success: false, message: 'Chưa đăng nhập' };
+    }
+
+    const cleanOld = (oldPassword || '').trim();
+    const cleanNew = (newPassword || '').trim();
+
+    if (!cleanNew) {
+      addToast('Vui lòng nhập mật khẩu mới!', 'error');
+      return { success: false, message: 'Vui lòng nhập mật khẩu mới!' };
+    }
+
+    if (cleanNew.length < 4) {
+      addToast('Mật khẩu mới phải có ít nhất 4 ký tự!', 'error');
+      return { success: false, message: 'Mật khẩu mới phải có ít nhất 4 ký tự!' };
+    }
+
+    if (cleanOld === cleanNew) {
+      addToast('Mật khẩu mới không được giống mật khẩu cũ!', 'error');
+      return { success: false, message: 'Mật khẩu mới không được giống mật khẩu cũ!' };
+    }
+
+    const uname = (user.username || user.role || '').toLowerCase();
+    const customPasswords = JSON.parse(localStorage.getItem('spa_user_passwords') || '{}');
+
+    // 1. Thử cập nhật lên Supabase
+    const res = await supabaseService.changePassword(user.id || user.username || uname, cleanOld, cleanNew);
+
+    if (res.success) {
+      // Lưu vào localStorage để hỗ trợ cả offline
+      customPasswords[uname] = cleanNew;
+      if (uname === 'chu' || uname === 'admin') {
+        customPasswords['chu'] = cleanNew;
+        customPasswords['admin'] = cleanNew;
+      } else if (uname === 'ql' || uname === 'quanly') {
+        customPasswords['ql'] = cleanNew;
+        customPasswords['quanly'] = cleanNew;
+      } else if (uname === 'nhanvien' || uname === 'nv') {
+        customPasswords['nhanvien'] = cleanNew;
+        customPasswords['nv'] = cleanNew;
+      }
+      localStorage.setItem('spa_user_passwords', JSON.stringify(customPasswords));
+
+      addToast('Đổi mật khẩu thành công! Mật khẩu mới đã được lưu vào hệ thống.', 'success');
+      return { success: true, message: 'Đổi mật khẩu thành công!' };
+    } else {
+      // Nếu mật khẩu cũ không đúng từ Supabase
+      if (res.message && res.message.includes('Mật khẩu hiện tại không chính xác')) {
+        addToast(res.message, 'error');
+        return res;
+      }
+
+      // 2. Nếu Supabase không khả dụng hoặc tài khoản cục bộ, kiểm tra fallback
+      const currentExpectedPass = customPasswords[uname] || '123456';
+      if (cleanOld !== currentExpectedPass) {
+        addToast('Mật khẩu hiện tại không chính xác!', 'error');
+        return { success: false, message: 'Mật khẩu hiện tại không chính xác!' };
+      }
+
+      customPasswords[uname] = cleanNew;
+      localStorage.setItem('spa_user_passwords', JSON.stringify(customPasswords));
+      addToast('Đã lưu mật khẩu mới vào máy (chế độ cục bộ)!', 'success');
+      return { success: true, message: 'Đã lưu mật khẩu mới!' };
+    }
   };
 
   // Logout handler
@@ -854,6 +967,7 @@ export const AppProvider = ({ children }) => {
         setUser,
         login,
         logout,
+        changePassword,
         switchRole,
         activeTab,
         setActiveTab: navigateToTab,
