@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import {
   User,
@@ -18,124 +19,220 @@ import {
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 import CurrencyInput from './CurrencyInput';
 
-// Component chọn dịch vụ có tích hợp ô tìm kiếm nhập tên trực tiếp trong bảng
+// Hàm chuẩn hóa tiếng Việt không dấu để tìm kiếm thông minh và chính xác
+function removeVietnameseTones(str) {
+  if (!str) return '';
+  str = String(str).toLowerCase();
+  str = str.replace(/à|á|ạ|ả|ã|â|ầ|ấ|ậ|ẩ|ẫ|ă|ằ|ắ|ặ|ẳ|ẵ/g, 'a');
+  str = str.replace(/è|é|ẹ|ẻ|ẽ|ê|ề|ế|ệ|ể|ễ/g, 'e');
+  str = str.replace(/ì|í|ị|ỉ|ĩ/g, 'i');
+  str = str.replace(/ò|ó|ọ|ỏ|õ|ô|ồ|ố|ộ|ổ|ỗ|ơ|ờ|ớ|ợ|ở|ỡ/g, 'o');
+  str = str.replace(/ù|ú|ụ|ủ|ũ|ư|ừ|ứ|ự|ử|ữ/g, 'u');
+  str = str.replace(/ỳ|ý|ỵ|ỷ|ỹ/g, 'y');
+  str = str.replace(/đ/g, 'd');
+  str = str.replace(/\u0300|\u0301|\u0303|\u0309|\u0323/g, '');
+  str = str.replace(/\u02C6|\u0306|\u031B/g, '');
+  return str.trim();
+}
+
+// Component chọn gói dịch vụ / sản phẩm: gõ tên tìm kiếm trực tiếp trong ô của bảng
 function SearchableServiceSelect({ value, services, onChange, isProduct, isFiller }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [query, setQuery] = useState('');
-  const wrapperRef = useRef(null);
+  const [searchText, setSearchText] = useState(value || '');
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 320 });
   const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Đồng bộ searchText khi giá trị dịch vụ của dòng thay đổi
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchText(value || '');
+    }
+  }, [value, isOpen]);
+
+  // Cập nhật tọa độ hiển thị dropdown nổi (Fixed positioning)
+  const updatePosition = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropdownHeight = 250;
+      const showAbove = spaceBelow < dropdownHeight && rect.top > dropdownHeight;
+      setCoords({
+        top: showAbove ? Math.max(10, rect.top - dropdownHeight - 4) : rect.bottom + 4,
+        left: Math.max(10, rect.left),
+        width: Math.max(rect.width, 320)
+      });
+    }
+  };
+
+  const handleOpen = () => {
+    updatePosition();
+    setIsOpen(true);
+    // Bôi đen toàn bộ chữ khi click vào để người dùng gõ từ khóa là thay thế tìm kiếm được ngay
+    setTimeout(() => {
+      inputRef.current?.select();
+    }, 20);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+    // Nếu người dùng gõ tìm nhưng click ra ngoài không chọn:
+    // Kiểm tra xem từ khóa có khớp chính xác dịch vụ nào không, nếu không thì hoàn lại tên cũ
+    const exact = (services || []).find(s => (s.name || '').toLowerCase() === (searchText || '').trim().toLowerCase());
+    if (exact) {
+      onChange(exact.name);
+      setSearchText(exact.name);
+    } else {
+      setSearchText(value || '');
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
-        setIsOpen(false);
-        setQuery('');
+      if (
+        inputRef.current && !inputRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        handleClose();
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [isOpen, searchText, value, services]);
 
-  const filtered = useMemo(() => {
-    const q = (query || '').toLowerCase().trim();
-    if (!q) return services || [];
-    return (services || []).filter(s =>
-      (s.name || '').toLowerCase().includes(q) ||
-      (s.category || '').toLowerCase().includes(q)
-    );
-  }, [services, query]);
+  // Lọc sản phẩm / dịch vụ theo nội dung người dùng nhập
+  const filteredServices = useMemo(() => {
+    const list = services || [];
+    const q = (searchText || '').trim().toLowerCase();
+    if (!q) return list;
 
-  const handleSelect = (serviceName) => {
-    onChange(serviceName);
+    const qNoTone = removeVietnameseTones(q);
+    return list.filter(s => {
+      const name = (s.name || '').toLowerCase();
+      const nameNoTone = removeVietnameseTones(name);
+      const cat = (s.category || '').toLowerCase();
+      const catNoTone = removeVietnameseTones(cat);
+
+      return name.includes(q) || nameNoTone.includes(qNoTone) ||
+             cat.includes(q) || catNoTone.includes(qNoTone);
+    });
+  }, [services, searchText]);
+
+  const handleSelectService = (srv) => {
+    onChange(srv.name);
+    setSearchText(srv.name);
     setIsOpen(false);
-    setQuery('');
   };
 
   return (
-    <div className="relative w-full" ref={wrapperRef}>
-      <div className="relative">
+    <div className="relative w-full">
+      <div className="relative flex items-center">
         <input
           ref={inputRef}
           type="text"
-          value={isOpen ? query : (value || '')}
+          value={searchText}
           onChange={(e) => {
-            setQuery(e.target.value);
-            if (!isOpen) setIsOpen(true);
+            setSearchText(e.target.value);
+            if (!isOpen) {
+              updatePosition();
+              setIsOpen(true);
+            }
           }}
-          onFocus={() => {
-            setQuery('');
-            setIsOpen(true);
-          }}
+          onFocus={handleOpen}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
-              if (filtered.length > 0) {
-                handleSelect(filtered[0].name);
+              if (filteredServices.length > 0) {
+                handleSelectService(filteredServices[0]);
               }
             } else if (e.key === 'Escape') {
-              setIsOpen(false);
-              setQuery('');
+              handleClose();
             }
           }}
-          placeholder="Gõ tên dịch vụ / SP để tìm..."
-          className="w-full pl-2.5 pr-7 py-1.5 bg-white border border-gray-200 focus:border-[#E60026] rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 shadow-2xs transition-all"
+          placeholder="Nhập tên sản phẩm / dịch vụ..."
+          className="w-full pl-2.5 pr-8 py-1.5 bg-white border border-gray-200 focus:border-[#E60026] rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 shadow-2xs transition-all"
         />
         <button
           type="button"
           tabIndex={-1}
           onClick={() => {
             if (isOpen) {
-              setIsOpen(false);
-              setQuery('');
+              handleClose();
             } else {
-              setQuery('');
-              setIsOpen(true);
               inputRef.current?.focus();
+              handleOpen();
             }
           }}
-          className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600"
-          title="Bấm để mở danh sách dịch vụ"
+          className="absolute right-0 inset-y-0 px-2 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
+          title="Bấm để mở danh sách sản phẩm / dịch vụ"
         >
           <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? 'rotate-180 text-[#E60026]' : ''}`} />
         </button>
       </div>
 
-      {/* Dropdown danh sách gợi ý khi gõ tên */}
-      {isOpen && (
-        <div className="absolute left-0 top-full mt-1 w-full min-w-[280px] sm:min-w-[340px] bg-white rounded-xl shadow-2xl border border-rose-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in duration-100">
-          <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 flex items-center justify-between">
-            <span>Danh sách dịch vụ ({filtered.length})</span>
-            {query && <span className="text-rose-600 font-semibold">Khớp với: "{query}"</span>}
+      {/* Render dropdown qua createPortal ra ngoài body để tuyệt đối không bị bảng hoặc overflow-x che khuất */}
+      {isOpen && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            zIndex: 99999
+          }}
+          className="bg-white rounded-xl shadow-2xl border border-rose-200 py-1.5 max-h-60 overflow-y-auto animate-in fade-in duration-100"
+        >
+          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 flex items-center justify-between">
+            <span>Gợi ý gói dịch vụ & sản phẩm ({filteredServices.length})</span>
+            {searchText && <span className="text-[#E60026] font-semibold truncate max-w-[150px]">Tìm: "{searchText}"</span>}
           </div>
-          {filtered.length === 0 ? (
-            <div className="px-3 py-3 text-xs text-gray-400 italic text-center">
-              Không tìm thấy dịch vụ nào có tên "{query}"
+
+          {filteredServices.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-gray-400 italic text-center">
+              Không tìm thấy gói dịch vụ hoặc sản phẩm nào khớp với "{searchText}"
             </div>
           ) : (
-            filtered.map((srv) => (
-              <button
-                key={srv.id}
-                type="button"
-                onClick={() => handleSelect(srv.name)}
-                className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-rose-50 transition-colors border-b border-gray-50 last:border-0 ${
-                  srv.name === value ? 'bg-rose-50/80 font-bold text-[#E60026]' : 'text-gray-800'
-                }`}
-              >
-                <div className="flex-1 pr-2 truncate">
-                  <div className="font-semibold truncate">{srv.name}</div>
-                  {srv.category && (
-                    <div className="text-[10px] text-gray-400">{srv.category}</div>
-                  )}
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="font-sans font-bold text-rose-600 text-xs">
-                    {formatCurrencyInput(srv.price)}đ
+            filteredServices.map((srv) => {
+              const isSelected = srv.name === value;
+              return (
+                <button
+                  key={srv.id}
+                  type="button"
+                  onMouseDown={(e) => {
+                    // Ngăn sự kiện blur của input trước khi click được ghi nhận
+                    e.preventDefault();
+                    handleSelectService(srv);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-rose-50 transition-colors border-b border-gray-50 last:border-0 ${
+                    isSelected ? 'bg-rose-50/80 font-bold text-[#E60026]' : 'text-gray-800'
+                  }`}
+                >
+                  <div className="flex-1 pr-2 truncate">
+                    <div className="font-semibold truncate">{srv.name}</div>
+                    {srv.category && (
+                      <div className="text-[10px] text-gray-400">{srv.category}</div>
+                    )}
                   </div>
-                </div>
-              </button>
-            ))
+                  <div className="text-right shrink-0">
+                    <div className="font-sans font-bold text-[#E60026] text-xs">
+                      {formatCurrencyInput(srv.price)}đ
+                    </div>
+                  </div>
+                </button>
+              );
+            })
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -163,30 +260,6 @@ export default function TabCreateInvoice() {
   const [customerDob, setCustomerDob] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [suggestionSource, setSuggestionSource] = useState(null); // 'name' | 'phone'
-
-  // Service Quick Search State (Tìm kiếm nhanh dịch vụ theo tên)
-  const [quickSearchQuery, setQuickSearchQuery] = useState('');
-  const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
-  const serviceQuickSearchRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutsideQuickSearch(e) {
-      if (serviceQuickSearchRef.current && !serviceQuickSearchRef.current.contains(e.target)) {
-        setIsQuickSearchOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutsideQuickSearch);
-    return () => document.removeEventListener('mousedown', handleClickOutsideQuickSearch);
-  }, []);
-
-  const filteredQuickServices = useMemo(() => {
-    const q = (quickSearchQuery || '').toLowerCase().trim();
-    if (!q) return [];
-    return (availableServices || []).filter(s =>
-      (s.name || '').toLowerCase().includes(q) ||
-      (s.category || '').toLowerCase().includes(q)
-    );
-  }, [availableServices, quickSearchQuery]);
 
   // Service line items:
   // 1. Dịch vụ bắt đầu bằng chữ "sản phẩm" -> Giá niêm yết (đã cài sẵn khi nhập dịch vụ vào cài đặt) * Số lượng - Khuyến mãi
@@ -304,45 +377,6 @@ export default function TabCreateInvoice() {
     setCustomerSuggestions([]);
     setSuggestionSource(null);
     addToast(`Đã tự động điền thông tin khách hàng: ${c.name}`, 'info');
-  };
-
-  // Quick Add or Select Service from search box
-  const handleAddOrSelectService = (srv) => {
-    if (!srv) return;
-    const price = Number(srv.price) || 0;
-    const qty = 1;
-
-    // Nếu chỉ có 1 dòng và chưa có dịch vụ nào hoặc đang giữ dịch vụ đầu tiên mặc định
-    if (serviceRows.length === 1 && (!serviceRows[0].serviceName || serviceRows[0].serviceName === availableServices[0]?.name) && Number(serviceRows[0].discountPrice || 0) === 0) {
-      handleServiceSelect(serviceRows[0].id, srv.name);
-      addToast(`Đã chọn dịch vụ: ${srv.name}`, 'info');
-      setQuickSearchQuery('');
-      setIsQuickSearchOpen(false);
-      return;
-    }
-
-    // Thêm dòng mới với dịch vụ vừa chọn
-    const newRow = {
-      id: Date.now(),
-      serviceName: srv.name,
-      quantity: qty,
-      quantityCc: qty,
-      unitPrice: price,
-      unitPriceCc: price,
-      listedPrice: price,
-      discountPrice: 0,
-      total: price,
-      onlineStaff: availableStaff[0]?.name || '',
-      onlineCommissionRate: 5,
-      directStaff: availableStaff[1]?.name || '',
-      directCommissionRate: 10,
-      execStaff: availableStaff[2]?.name || '',
-      execCommissionRate: 15
-    };
-    setServiceRows(prev => [...prev, newRow]);
-    addToast(`Đã thêm dịch vụ: ${srv.name}`, 'success');
-    setQuickSearchQuery('');
-    setIsQuickSearchOpen(false);
   };
 
   // Add new service row
@@ -682,95 +716,6 @@ export default function TabCreateInvoice() {
               <Plus className="w-4 h-4" />
               <span>Thêm dịch vụ</span>
             </button>
-          </div>
-        </div>
-
-        {/* Quick Search Service Bar - Tìm kiếm theo tên dịch vụ / sản phẩm */}
-        <div className="mt-4 p-3.5 bg-gradient-to-r from-rose-50/70 via-rose-50/30 to-amber-50/30 rounded-xl border border-rose-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-bold text-gray-800 shrink-0">
-            <div className="w-6 h-6 rounded-lg bg-[#E60026] text-white flex items-center justify-center">
-              <Search className="w-3.5 h-3.5" />
-            </div>
-            <span>Tìm kiếm dịch vụ / SP:</span>
-          </div>
-          <div className="relative flex-1" ref={serviceQuickSearchRef}>
-            <input
-              type="text"
-              value={quickSearchQuery}
-              onChange={(e) => {
-                setQuickSearchQuery(e.target.value);
-                setIsQuickSearchOpen(true);
-              }}
-              onFocus={() => setIsQuickSearchOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  if (filteredQuickServices.length > 0) {
-                    handleAddOrSelectService(filteredQuickServices[0]);
-                  }
-                } else if (e.key === 'Escape') {
-                  setIsQuickSearchOpen(false);
-                }
-              }}
-              placeholder="Nhập tên dịch vụ hoặc sản phẩm để tìm và chọn nhanh (Ví dụ: penlips, filler cằm, serum... - Nhấn Enter để thêm)"
-              className="w-full pl-3 pr-8 py-2 bg-white border border-rose-200 hover:border-rose-300 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-medium shadow-2xs"
-            />
-            {quickSearchQuery && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickSearchQuery('');
-                  setIsQuickSearchOpen(false);
-                }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {/* Dropdown kết quả tìm kiếm nhanh */}
-            {isQuickSearchOpen && quickSearchQuery.trim() && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-rose-200 p-2 z-40 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
-                <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider flex items-center justify-between border-b border-gray-100">
-                  <span>Dịch vụ & Sản phẩm phù hợp ({filteredQuickServices.length})</span>
-                  <span className="text-[10px] text-gray-400 font-normal">Nhấn vào dịch vụ hoặc phím Enter để thêm</span>
-                </div>
-                {filteredQuickServices.length === 0 ? (
-                  <div className="p-3 text-xs text-gray-400 text-center italic">
-                    Không tìm thấy dịch vụ hay sản phẩm nào có tên "{quickSearchQuery}"
-                  </div>
-                ) : (
-                  filteredQuickServices.map(srv => (
-                    <button
-                      key={srv.id}
-                      type="button"
-                      onClick={() => handleAddOrSelectService(srv)}
-                      className="w-full text-left p-2 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#E60026]"></span>
-                        <span className="font-semibold text-gray-800 group-hover:text-[#E60026]">
-                          {srv.name}
-                        </span>
-                        {srv.category && (
-                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                            {srv.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-[#E60026] font-sans">
-                          {formatCurrencyInput(srv.price)}đ
-                        </span>
-                        <span className="text-[10px] font-semibold text-white bg-[#E60026] px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                          + Chọn
-                        </span>
-                      </div>
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
           </div>
         </div>
 
