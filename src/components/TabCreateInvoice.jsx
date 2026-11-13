@@ -134,7 +134,7 @@ function SearchableServiceSelect({ value, services, onChange, isProduct, isFille
 
   return (
     <div className="relative w-full">
-      <div className="relative flex items-center">
+      <div className="relative">
         <input
           ref={inputRef}
           type="text"
@@ -157,28 +157,13 @@ function SearchableServiceSelect({ value, services, onChange, isProduct, isFille
               handleClose();
             }
           }}
-          placeholder="Nhập tên sản phẩm / dịch vụ..."
-          className="w-full pl-2.5 pr-8 py-1.5 bg-white border border-gray-200 focus:border-[#E60026] rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 shadow-2xs transition-all"
+          placeholder="Nhập tên gói dịch vụ / sản phẩm (gõ tên để tìm)..."
+          className="w-full pl-3 pr-8 py-2 bg-gray-50/70 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
         />
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => {
-            if (isOpen) {
-              handleClose();
-            } else {
-              inputRef.current?.focus();
-              handleOpen();
-            }
-          }}
-          className="absolute right-0 inset-y-0 px-2 flex items-center text-gray-400 hover:text-gray-700 transition-colors"
-          title="Bấm để mở danh sách sản phẩm / dịch vụ"
-        >
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? 'rotate-180 text-[#E60026]' : ''}`} />
-        </button>
+        <Search className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
       </div>
 
-      {/* Render dropdown qua createPortal ra ngoài body để tuyệt đối không bị bảng hoặc overflow-x che khuất */}
+      {/* Render dropdown gợi ý theo phong cách đồng bộ với ô tìm kiếm khách hàng */}
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
@@ -189,47 +174,44 @@ function SearchableServiceSelect({ value, services, onChange, isProduct, isFille
             width: `${coords.width}px`,
             zIndex: 99999
           }}
-          className="bg-white rounded-xl shadow-2xl border border-rose-200 py-1.5 max-h-60 overflow-y-auto animate-in fade-in duration-100"
+          className="bg-white rounded-xl shadow-xl border border-rose-100 p-2 z-50 space-y-1 max-h-64 overflow-y-auto animate-in fade-in duration-100"
         >
-          <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 flex items-center justify-between">
-            <span>Gợi ý gói dịch vụ & sản phẩm ({filteredServices.length})</span>
-            {searchText && <span className="text-[#E60026] font-semibold truncate max-w-[150px]">Tìm: "{searchText}"</span>}
-          </div>
+          <p className="text-[11px] font-semibold text-gray-400 px-2 py-0.5 uppercase flex items-center justify-between">
+            <span>Gói dịch vụ / SP đã lưu ({filteredServices.length}):</span>
+            {searchText && <span className="text-[#E60026] normal-case font-medium truncate max-w-[140px]">"{searchText}"</span>}
+          </p>
 
           {filteredServices.length === 0 ? (
-            <div className="px-4 py-3 text-xs text-gray-400 italic text-center">
+            <div className="px-3 py-2 text-xs text-gray-400 italic text-center">
               Không tìm thấy gói dịch vụ hoặc sản phẩm nào khớp với "{searchText}"
             </div>
           ) : (
-            filteredServices.map((srv) => {
-              const isSelected = srv.name === value;
-              return (
-                <button
-                  key={srv.id}
-                  type="button"
-                  onMouseDown={(e) => {
-                    // Ngăn sự kiện blur của input trước khi click được ghi nhận
-                    e.preventDefault();
-                    handleSelectService(srv);
-                  }}
-                  className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-rose-50 transition-colors border-b border-gray-50 last:border-0 ${
-                    isSelected ? 'bg-rose-50/80 font-bold text-[#E60026]' : 'text-gray-800'
-                  }`}
-                >
-                  <div className="flex-1 pr-2 truncate">
-                    <div className="font-semibold truncate">{srv.name}</div>
-                    {srv.category && (
-                      <div className="text-[10px] text-gray-400">{srv.category}</div>
-                    )}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div className="font-sans font-bold text-[#E60026] text-xs">
-                      {formatCurrencyInput(srv.price)}đ
-                    </div>
-                  </div>
-                </button>
-              );
-            })
+            filteredServices.map((srv) => (
+              <button
+                key={srv.id}
+                type="button"
+                onMouseDown={(e) => {
+                  // Ngăn sự kiện blur của input trước khi click được ghi nhận
+                  e.preventDefault();
+                  handleSelectService(srv);
+                }}
+                className={`w-full text-left px-2.5 py-1.5 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors group ${
+                  srv.name === value ? 'bg-rose-50/80 font-bold text-[#E60026]' : 'text-gray-800'
+                }`}
+              >
+                <div className="flex-1 pr-2 truncate">
+                  <span className="font-semibold text-gray-800 group-hover:text-[#E60026]">{srv.name}</span>
+                  {srv.category && (
+                    <span className="ml-2 text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                      {srv.category}
+                    </span>
+                  )}
+                </div>
+                <span className="font-sans font-bold text-[#E60026] text-xs shrink-0">
+                  {formatCurrencyInput(srv.price)}đ
+                </span>
+              </button>
+            ))
           )}
         </div>,
         document.body
