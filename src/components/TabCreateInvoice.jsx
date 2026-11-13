@@ -68,22 +68,29 @@ function SearchableServiceSelect({ value, services, onChange, isProduct, isFille
   const handleOpen = () => {
     updatePosition();
     setIsOpen(true);
-    // Bôi đen toàn bộ chữ khi click vào để người dùng gõ từ khóa là thay thế tìm kiếm được ngay
-    setTimeout(() => {
-      inputRef.current?.select();
-    }, 20);
+    // Bôi đen chữ nếu có để người dùng gõ từ khóa là thay thế hoặc tự nhập thủ công được ngay
+    if (searchText) {
+      setTimeout(() => {
+        inputRef.current?.select();
+      }, 20);
+    }
   };
 
   const handleClose = () => {
     setIsOpen(false);
-    // Nếu người dùng gõ tìm nhưng click ra ngoài không chọn:
-    // Kiểm tra xem từ khóa có khớp chính xác dịch vụ nào không, nếu không thì hoàn lại tên cũ
-    const exact = (services || []).find(s => (s.name || '').toLowerCase() === (searchText || '').trim().toLowerCase());
+    const trimmed = (searchText || '').trim();
+    // 1. Kiểm tra khớp chính xác với danh mục dịch vụ đã lưu
+    const exact = (services || []).find(s => (s.name || '').toLowerCase() === trimmed.toLowerCase());
     if (exact) {
       onChange(exact.name);
       setSearchText(exact.name);
+    } else if (trimmed) {
+      // 2. Cho phép người dùng tự nhập thủ công bất kỳ tên dịch vụ / sản phẩm nào
+      onChange(trimmed);
+      setSearchText(trimmed);
     } else {
-      setSearchText(value || '');
+      onChange('');
+      setSearchText('');
     }
   };
 
@@ -152,6 +159,9 @@ function SearchableServiceSelect({ value, services, onChange, isProduct, isFille
               e.preventDefault();
               if (filteredServices.length > 0) {
                 handleSelectService(filteredServices[0]);
+              } else if (searchText.trim()) {
+                onChange(searchText.trim());
+                setIsOpen(false);
               }
             } else if (e.key === 'Escape') {
               handleClose();
@@ -256,14 +266,14 @@ export default function TabCreateInvoice() {
   const [serviceRows, setServiceRows] = useState([
     {
       id: 1,
-      serviceName: 'Xử lý thâm',
+      serviceName: '',
       quantity: 1,
-      unitPrice: 2000000,
-      unitPriceCc: 2000000,
+      unitPrice: 0,
+      unitPriceCc: 0,
       quantityCc: 1,
-      listedPrice: 2000000,
+      listedPrice: 0,
       discountPrice: 0,
-      total: 2000000,
+      total: 0,
       onlineStaff: '',
       onlineCommissionRate: 5,
       directStaff: '',
@@ -272,32 +282,6 @@ export default function TabCreateInvoice() {
       execCommissionRate: 15
     }
   ]);
-
-  // Sync initial row with availableServices when loaded if default isn't in list
-  useEffect(() => {
-    if (availableServices && availableServices.length > 0) {
-      setServiceRows(prev => {
-        if (prev.length === 1 && prev[0].serviceName === 'Xử lý thâm') {
-          const match = availableServices.find(s => s.name === 'Xử lý thâm');
-          if (!match) {
-            const first = availableServices[0];
-            const p = Number(first.price) || 2000000;
-            return [
-              {
-                ...prev[0],
-                serviceName: first.name,
-                listedPrice: p,
-                unitPrice: p,
-                unitPriceCc: p,
-                total: p
-              }
-            ];
-          }
-        }
-        return prev;
-      });
-    }
-  }, [availableServices]);
 
   // Modals state for Staff and Bank
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -309,7 +293,7 @@ export default function TabCreateInvoice() {
   // Payment fields
   const [paymentMethod, setPaymentMethod] = useState('Chuyển khoản');
   const [bankAccount, setBankAccount] = useState('Vietcombank Spa');
-  const [paidAmount, setPaidAmount] = useState(2000000);
+  const [paidAmount, setPaidAmount] = useState(0);
   const [isPaidCustom, setIsPaidCustom] = useState(false);
   const [note, setNote] = useState('');
 
@@ -363,20 +347,16 @@ export default function TabCreateInvoice() {
 
   // Add new service row
   const handleAddRow = () => {
-    const firstService = availableServices[0] || { name: 'Xử lý thâm', price: 2000000 };
-    const price = Number(firstService.price) || 2000000;
-    const qty = 1;
-
     const newRow = {
       id: Date.now(),
-      serviceName: firstService.name,
-      quantity: qty,
-      quantityCc: qty,
-      unitPrice: price,
-      unitPriceCc: price,
-      listedPrice: price,
+      serviceName: '',
+      quantity: 1,
+      quantityCc: 1,
+      unitPrice: 0,
+      unitPriceCc: 0,
+      listedPrice: 0,
       discountPrice: 0,
-      total: price,
+      total: 0,
       onlineStaff: availableStaff[0]?.name || '',
       onlineCommissionRate: 5,
       directStaff: availableStaff[1]?.name || '',
@@ -396,24 +376,27 @@ export default function TabCreateInvoice() {
     setServiceRows(serviceRows.filter(r => r.id !== id));
   };
 
-  // Update row service selection: tự động lấy Giá niêm yết từ Cài đặt
+  // Update row service selection: tự động lấy Giá niêm yết từ Cài đặt nếu có, hoặc cho phép tự nhập giá thủ công
   const handleServiceSelect = (id, serviceName) => {
-    const found = availableServices.find(s => s.name === serviceName);
-    const price = found ? (Number(found.price) || 0) : 2000000;
+    const clean = (serviceName || '').trim().toLowerCase();
+    const found = availableServices.find(s => (s.name || '').toLowerCase() === clean);
+    const matchedPrice = found ? (Number(found.price) || 0) : null;
 
     setServiceRows(serviceRows.map(r => {
       if (r.id === id) {
         const qty = Number(r.quantity) > 0 ? Number(r.quantity) : 1;
         const discount = Number(r.discountPrice) || 0;
-        const total = Math.max(0, (price * qty) - discount);
+        // Nếu khớp dịch vụ đã lưu thì tự điền giá niêm yết từ Cài đặt; nếu tự nhập thủ công thì giữ giá hiện tại
+        const nextPrice = matchedPrice !== null ? matchedPrice : (Number(r.listedPrice) || 0);
+        const total = Math.max(0, (nextPrice * qty) - discount);
         return {
           ...r,
           serviceName,
           quantity: qty,
           quantityCc: qty,
-          unitPrice: price,
-          unitPriceCc: price,
-          listedPrice: price,
+          unitPrice: nextPrice,
+          unitPriceCc: nextPrice,
+          listedPrice: nextPrice,
           discountPrice: discount,
           total
         };
@@ -456,6 +439,11 @@ export default function TabCreateInvoice() {
     }
     if (serviceRows.length === 0) {
       addToast('Vui lòng thêm ít nhất một dịch vụ!', 'error');
+      return;
+    }
+    const hasEmptyService = serviceRows.some(r => !r.serviceName || !r.serviceName.trim());
+    if (hasEmptyService) {
+      addToast('Vui lòng nhập hoặc chọn tên gói dịch vụ / sản phẩm cho tất cả các dòng!', 'error');
       return;
     }
 
@@ -529,14 +517,14 @@ export default function TabCreateInvoice() {
       setServiceRows([
         {
           id: Date.now(),
-          serviceName: availableServices[0]?.name || 'Xử lý thâm',
+          serviceName: '',
           quantity: 1,
           quantityCc: 1,
-          unitPrice: availableServices[0]?.price || 2000000,
-          unitPriceCc: availableServices[0]?.price || 2000000,
-          listedPrice: availableServices[0]?.price || 2000000,
+          unitPrice: 0,
+          unitPriceCc: 0,
+          listedPrice: 0,
           discountPrice: 0,
-          total: availableServices[0]?.price || 2000000,
+          total: 0,
           onlineStaff: '',
           onlineCommissionRate: 5,
           directStaff: '',
