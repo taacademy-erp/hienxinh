@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import {
   User,
@@ -12,10 +12,134 @@ import {
   Sparkles,
   Search,
   Building2,
-  X
+  X,
+  ChevronDown
 } from 'lucide-react';
 import { formatCurrencyInput, parseCurrencyInput } from '../utils/currencyUtils';
 import CurrencyInput from './CurrencyInput';
+
+// Component chọn dịch vụ có tích hợp ô tìm kiếm nhập tên trực tiếp trong bảng
+function SearchableServiceSelect({ value, services, onChange, isProduct, isFiller }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapperRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+        setQuery('');
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = (query || '').toLowerCase().trim();
+    if (!q) return services || [];
+    return (services || []).filter(s =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q)
+    );
+  }, [services, query]);
+
+  const handleSelect = (serviceName) => {
+    onChange(serviceName);
+    setIsOpen(false);
+    setQuery('');
+  };
+
+  return (
+    <div className="relative w-full" ref={wrapperRef}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={isOpen ? query : (value || '')}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onFocus={() => {
+            setQuery('');
+            setIsOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              if (filtered.length > 0) {
+                handleSelect(filtered[0].name);
+              }
+            } else if (e.key === 'Escape') {
+              setIsOpen(false);
+              setQuery('');
+            }
+          }}
+          placeholder="Gõ tên dịch vụ / SP để tìm..."
+          className="w-full pl-2.5 pr-7 py-1.5 bg-white border border-gray-200 focus:border-[#E60026] rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500 shadow-2xs transition-all"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => {
+            if (isOpen) {
+              setIsOpen(false);
+              setQuery('');
+            } else {
+              setQuery('');
+              setIsOpen(true);
+              inputRef.current?.focus();
+            }
+          }}
+          className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400 hover:text-gray-600"
+          title="Bấm để mở danh sách dịch vụ"
+        >
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-150 ${isOpen ? 'rotate-180 text-[#E60026]' : ''}`} />
+        </button>
+      </div>
+
+      {/* Dropdown danh sách gợi ý khi gõ tên */}
+      {isOpen && (
+        <div className="absolute left-0 top-full mt-1 w-full min-w-[280px] sm:min-w-[340px] bg-white rounded-xl shadow-2xl border border-rose-100 py-1.5 z-50 max-h-60 overflow-y-auto animate-in fade-in duration-100">
+          <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 border-b border-gray-100 flex items-center justify-between">
+            <span>Danh sách dịch vụ ({filtered.length})</span>
+            {query && <span className="text-rose-600 font-semibold">Khớp với: "{query}"</span>}
+          </div>
+          {filtered.length === 0 ? (
+            <div className="px-3 py-3 text-xs text-gray-400 italic text-center">
+              Không tìm thấy dịch vụ nào có tên "{query}"
+            </div>
+          ) : (
+            filtered.map((srv) => (
+              <button
+                key={srv.id}
+                type="button"
+                onClick={() => handleSelect(srv.name)}
+                className={`w-full px-3 py-2 text-left text-xs flex items-center justify-between hover:bg-rose-50 transition-colors border-b border-gray-50 last:border-0 ${
+                  srv.name === value ? 'bg-rose-50/80 font-bold text-[#E60026]' : 'text-gray-800'
+                }`}
+              >
+                <div className="flex-1 pr-2 truncate">
+                  <div className="font-semibold truncate">{srv.name}</div>
+                  {srv.category && (
+                    <div className="text-[10px] text-gray-400">{srv.category}</div>
+                  )}
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-sans font-bold text-rose-600 text-xs">
+                    {formatCurrencyInput(srv.price)}đ
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TabCreateInvoice() {
   const {
@@ -38,6 +162,31 @@ export default function TabCreateInvoice() {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDob, setCustomerDob] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [suggestionSource, setSuggestionSource] = useState(null); // 'name' | 'phone'
+
+  // Service Quick Search State (Tìm kiếm nhanh dịch vụ theo tên)
+  const [quickSearchQuery, setQuickSearchQuery] = useState('');
+  const [isQuickSearchOpen, setIsQuickSearchOpen] = useState(false);
+  const serviceQuickSearchRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutsideQuickSearch(e) {
+      if (serviceQuickSearchRef.current && !serviceQuickSearchRef.current.contains(e.target)) {
+        setIsQuickSearchOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutsideQuickSearch);
+    return () => document.removeEventListener('mousedown', handleClickOutsideQuickSearch);
+  }, []);
+
+  const filteredQuickServices = useMemo(() => {
+    const q = (quickSearchQuery || '').toLowerCase().trim();
+    if (!q) return [];
+    return (availableServices || []).filter(s =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q)
+    );
+  }, [availableServices, quickSearchQuery]);
 
   // Service line items:
   // 1. Dịch vụ bắt đầu bằng chữ "sản phẩm" -> Giá niêm yết (đã cài sẵn khi nhập dịch vụ vào cài đặt) * Số lượng - Khuyến mãi
@@ -118,16 +267,33 @@ export default function TabCreateInvoice() {
     }
   }, [computedTotal, isPaidCustom]);
 
-  // Handle customer suggestion lookup when typing phone or name
+  // Handle customer suggestion lookup when typing name
+  const handleNameChange = (val) => {
+    setCustomerName(val);
+    if (val.trim().length >= 2) {
+      const q = val.trim().toLowerCase();
+      const matches = customers.filter(c =>
+        (c.name && c.name.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q))
+      );
+      setCustomerSuggestions(matches);
+      setSuggestionSource('name');
+    } else {
+      if (suggestionSource === 'name') setCustomerSuggestions([]);
+    }
+  };
+
+  // Handle customer suggestion lookup when typing phone
   const handlePhoneChange = (val) => {
     setCustomerPhone(val);
     if (val.trim().length >= 3) {
+      const q = val.trim().toLowerCase();
       const matches = customers.filter(c =>
-        c.phone.includes(val.trim()) || c.name.toLowerCase().includes(val.toLowerCase())
+        (c.phone && c.phone.includes(val.trim())) || (c.name && c.name.toLowerCase().includes(q))
       );
       setCustomerSuggestions(matches);
+      setSuggestionSource('phone');
     } else {
-      setCustomerSuggestions([]);
+      if (suggestionSource === 'phone') setCustomerSuggestions([]);
     }
   };
 
@@ -136,7 +302,47 @@ export default function TabCreateInvoice() {
     setCustomerPhone(c.phone);
     setCustomerDob(c.dob || '');
     setCustomerSuggestions([]);
+    setSuggestionSource(null);
     addToast(`Đã tự động điền thông tin khách hàng: ${c.name}`, 'info');
+  };
+
+  // Quick Add or Select Service from search box
+  const handleAddOrSelectService = (srv) => {
+    if (!srv) return;
+    const price = Number(srv.price) || 0;
+    const qty = 1;
+
+    // Nếu chỉ có 1 dòng và chưa có dịch vụ nào hoặc đang giữ dịch vụ đầu tiên mặc định
+    if (serviceRows.length === 1 && (!serviceRows[0].serviceName || serviceRows[0].serviceName === availableServices[0]?.name) && Number(serviceRows[0].discountPrice || 0) === 0) {
+      handleServiceSelect(serviceRows[0].id, srv.name);
+      addToast(`Đã chọn dịch vụ: ${srv.name}`, 'info');
+      setQuickSearchQuery('');
+      setIsQuickSearchOpen(false);
+      return;
+    }
+
+    // Thêm dòng mới với dịch vụ vừa chọn
+    const newRow = {
+      id: Date.now(),
+      serviceName: srv.name,
+      quantity: qty,
+      quantityCc: qty,
+      unitPrice: price,
+      unitPriceCc: price,
+      listedPrice: price,
+      discountPrice: 0,
+      total: price,
+      onlineStaff: availableStaff[0]?.name || '',
+      onlineCommissionRate: 5,
+      directStaff: availableStaff[1]?.name || '',
+      directCommissionRate: 10,
+      execStaff: availableStaff[2]?.name || '',
+      execCommissionRate: 15
+    };
+    setServiceRows(prev => [...prev, newRow]);
+    addToast(`Đã thêm dịch vụ: ${srv.name}`, 'success');
+    setQuickSearchQuery('');
+    setIsQuickSearchOpen(false);
   };
 
   // Add new service row
@@ -351,24 +557,49 @@ export default function TabCreateInvoice() {
 
         <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-5 relative">
           {/* Customer Name */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Họ và tên <span className="text-red-500">*</span>
+          <div className="relative">
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center justify-between">
+              <span>Họ và tên <span className="text-red-500">*</span></span>
+              <span className="text-[10px] text-gray-400 font-normal">Gõ tên để tìm khách cũ</span>
             </label>
-            <input
-              type="text"
-              required
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Nguyễn Thị Mai"
-              className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={customerName}
+                onChange={(e) => handleNameChange(e.target.value)}
+                placeholder="Nguyễn Thị Mai (gõ tên để tìm)"
+                className="w-full pl-3.5 pr-8 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all"
+              />
+              <Search className="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Suggestions dropdown if customer already in DB when typing name */}
+            {suggestionSource === 'name' && customerSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-rose-100 p-2 z-30 space-y-1 animate-in fade-in">
+                <p className="text-[11px] font-semibold text-gray-400 px-2 py-0.5 uppercase">
+                  Khách hàng khớp với tên vừa nhập:
+                </p>
+                {customerSuggestions.slice(0, 5).map(c => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => selectSuggestedCustomer(c)}
+                    className="w-full text-left px-2.5 py-1.5 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors group"
+                  >
+                    <span className="font-semibold text-gray-800 group-hover:text-[#E60026]">{c.name}</span>
+                    <span className="font-sans text-gray-500 text-[11px]">{c.phone}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Customer Phone */}
           <div className="relative">
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Số điện thoại <span className="text-red-500">*</span>
+            <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center justify-between">
+              <span>Số điện thoại <span className="text-red-500">*</span></span>
+              <span className="text-[10px] text-gray-400 font-normal">Gõ SĐT để tìm</span>
             </label>
             <input
               type="tel"
@@ -379,21 +610,21 @@ export default function TabCreateInvoice() {
               className="w-full px-3.5 py-2.5 bg-gray-50/70 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-sans"
             />
 
-            {/* Suggestions dropdown if customer already in DB */}
-            {customerSuggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-rose-100 p-2 z-30 space-y-1">
+            {/* Suggestions dropdown if customer already in DB when typing phone */}
+            {suggestionSource === 'phone' && customerSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-rose-100 p-2 z-30 space-y-1 animate-in fade-in">
                 <p className="text-[11px] font-semibold text-gray-400 px-2 py-0.5 uppercase">
-                  Khách hàng đã có trong hệ thống:
+                  Khách hàng khớp với SĐT:
                 </p>
-                {customerSuggestions.slice(0, 4).map(c => (
+                {customerSuggestions.slice(0, 5).map(c => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => selectSuggestedCustomer(c)}
-                    className="w-full text-left px-2.5 py-1.5 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors"
+                    className="w-full text-left px-2.5 py-1.5 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors group"
                   >
-                    <span className="font-semibold text-gray-800">{c.name}</span>
-                    <span className="font-sans text-gray-500">{c.phone}</span>
+                    <span className="font-semibold text-gray-800 group-hover:text-[#E60026]">{c.name}</span>
+                    <span className="font-sans text-gray-500 text-[11px]">{c.phone}</span>
                   </button>
                 ))}
               </div>
@@ -454,13 +685,102 @@ export default function TabCreateInvoice() {
           </div>
         </div>
 
+        {/* Quick Search Service Bar - Tìm kiếm theo tên dịch vụ / sản phẩm */}
+        <div className="mt-4 p-3.5 bg-gradient-to-r from-rose-50/70 via-rose-50/30 to-amber-50/30 rounded-xl border border-rose-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-800 shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-[#E60026] text-white flex items-center justify-center">
+              <Search className="w-3.5 h-3.5" />
+            </div>
+            <span>Tìm kiếm dịch vụ / SP:</span>
+          </div>
+          <div className="relative flex-1" ref={serviceQuickSearchRef}>
+            <input
+              type="text"
+              value={quickSearchQuery}
+              onChange={(e) => {
+                setQuickSearchQuery(e.target.value);
+                setIsQuickSearchOpen(true);
+              }}
+              onFocus={() => setIsQuickSearchOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  if (filteredQuickServices.length > 0) {
+                    handleAddOrSelectService(filteredQuickServices[0]);
+                  }
+                } else if (e.key === 'Escape') {
+                  setIsQuickSearchOpen(false);
+                }
+              }}
+              placeholder="Nhập tên dịch vụ hoặc sản phẩm để tìm và chọn nhanh (Ví dụ: penlips, filler cằm, serum... - Nhấn Enter để thêm)"
+              className="w-full pl-3 pr-8 py-2 bg-white border border-rose-200 hover:border-rose-300 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-[#E60026] transition-all font-medium shadow-2xs"
+            />
+            {quickSearchQuery && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickSearchQuery('');
+                  setIsQuickSearchOpen(false);
+                }}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            {/* Dropdown kết quả tìm kiếm nhanh */}
+            {isQuickSearchOpen && quickSearchQuery.trim() && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-xl shadow-2xl border border-rose-200 p-2 z-40 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-150">
+                <div className="text-[11px] font-bold text-gray-400 px-2 py-1 uppercase tracking-wider flex items-center justify-between border-b border-gray-100">
+                  <span>Dịch vụ & Sản phẩm phù hợp ({filteredQuickServices.length})</span>
+                  <span className="text-[10px] text-gray-400 font-normal">Nhấn vào dịch vụ hoặc phím Enter để thêm</span>
+                </div>
+                {filteredQuickServices.length === 0 ? (
+                  <div className="p-3 text-xs text-gray-400 text-center italic">
+                    Không tìm thấy dịch vụ hay sản phẩm nào có tên "{quickSearchQuery}"
+                  </div>
+                ) : (
+                  filteredQuickServices.map(srv => (
+                    <button
+                      key={srv.id}
+                      type="button"
+                      onClick={() => handleAddOrSelectService(srv)}
+                      className="w-full text-left p-2 hover:bg-rose-50 rounded-lg text-xs flex items-center justify-between transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#E60026]"></span>
+                        <span className="font-semibold text-gray-800 group-hover:text-[#E60026]">
+                          {srv.name}
+                        </span>
+                        {srv.category && (
+                          <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                            {srv.category}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-[#E60026] font-sans">
+                          {formatCurrencyInput(srv.price)}đ
+                        </span>
+                        <span className="text-[10px] font-semibold text-white bg-[#E60026] px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+                          + Chọn
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Services Table */}
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5 overflow-x-auto min-h-[300px]">
           <table className="w-full text-left text-sm border-separate border-spacing-y-2">
             <thead>
               <tr className="text-xs font-bold text-gray-600 border-b border-gray-100">
                 <th className="pb-3 px-2 w-10 text-center font-bold">STT</th>
-                <th className="pb-3 px-3 min-w-[200px]">Gói dịch vụ / Sản phẩm</th>
+                <th className="pb-3 px-3 min-w-[240px]">Gói dịch vụ / Sản phẩm</th>
                 <th className="pb-3 px-3 min-w-[130px] text-center">
                   Giá niêm yết <br />
                   <span className="text-[10px] font-normal text-gray-400">(Từ cài đặt)</span>
@@ -503,20 +823,16 @@ export default function TabCreateInvoice() {
                       {index + 1}
                     </td>
 
-                    {/* Service Package Dropdown */}
-                    <td className="py-3 px-3">
+                    {/* Service Package Dropdown - Tìm kiếm nhập tên thay vì nhấp mũi tên kiếm */}
+                    <td className="py-3 px-3 min-w-[240px]">
                       <div className="space-y-1">
-                        <select
+                        <SearchableServiceSelect
                           value={row.serviceName}
-                          onChange={(e) => handleServiceSelect(row.id, e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-rose-500"
-                        >
-                          {availableServices.map(srv => (
-                            <option key={srv.id} value={srv.name}>
-                              {srv.name}
-                            </option>
-                          ))}
-                        </select>
+                          services={availableServices}
+                          onChange={(selectedName) => handleServiceSelect(row.id, selectedName)}
+                          isProduct={isProduct}
+                          isFiller={isFiller}
+                        />
                         {isProduct && (
                           <div className="flex items-center gap-1 text-[11px] text-amber-700 font-semibold px-1">
                             <span>🛍️ Sản phẩm bán lẻ</span>
